@@ -198,12 +198,12 @@ class GameRenderer
             this.device.queue.submit([commandEncoder.finish()]);
 
             const a = this.changingCpuArray;
-            const dstBase = instanceIndex * (positionSize + scaleSize) / 4;
-            const srcBase = lastIndex * (positionSize + scaleSize) / 4;
-            a[dstBase + 0] = a[srcBase + 0]; // pos.x
-            a[dstBase + 1] = a[srcBase + 1]; // pos.y
-            a[dstBase + 2] = a[srcBase + 2]; // scale.x
-            a[dstBase + 3] = a[srcBase + 3]; // scale.y
+            const floatsPerInstance = (positionSize + scaleSize) / 4;
+            const dstBase = instanceIndex * floatsPerInstance;
+            const srcBase = lastIndex * floatsPerInstance;
+                for (let k = 0; k < floatsPerInstance; k++) {
+                a[dstBase + k] = a[srcBase + k];
+            }
 
             const movedId = this.indexToId[lastIndex];
             this.indexToId[instanceIndex] = movedId;
@@ -322,12 +322,61 @@ class GameRenderer
         this.device.queue.submit([encoder.finish()]);
     }
 
+    // ================================== //
+    public async cleanup() {
+        // Stop using device first
+        this.numInstances = 0;
+        this.idToIndexMap.clear();
+        this.indexToId = [];
+        this.changingCpuArray = new Float32Array(this.maxInstances * (positionSize + scaleSize) / 4);
+        this.numContacts = 0;
+        this.contactPositions = new Float32Array(0);
+
+        // Disconnect ResizeObserver
+        if (this.observer && this.canvas) {
+            this.observer.unobserve(this.canvas);
+            this.observer.disconnect();
+            this.observer = null;
+        }
+
+        // Destroy GPU resources if present
+        const destroy = (b?: GPUBuffer | null) => { try { b?.destroy(); } catch {} };
+        destroy(this.vertexBuffer);        this.vertexBuffer = null;
+        destroy(this.indexBuffer);         this.indexBuffer = null;
+        destroy(this.staticBuffer);        this.staticBuffer = null;
+        destroy(this.changingBuffer);      this.changingBuffer = null;
+        destroy(this.contactVertexBuffer); this.contactVertexBuffer = null;
+        destroy(this.contactIndexBuffer);  this.contactIndexBuffer = null;
+        destroy(this.contactPositionBuffer); this.contactPositionBuffer = null;
+        destroy(this.screenUniformBuffer); this.screenUniformBuffer = null;
+
+        // Release textures
+        this.msaaView = null;
+        try { this.msaaTexture?.destroy(); } catch {}
+        this.msaaTexture = null;
+
+        // Null pipelines/shaders/query sets so GC can collect
+        this.CubesPipeline = null;
+        this.ContactPipeline = null;
+        this.CubesShaderModule = null;
+        this.ContactShaderModule = null;
+        this.cubePipelineLayout = null;
+        this.timestampQuerySet = null;
+
+        // Context/device references
+        this.context = null;
+        this.presentationFormat = null;
+        // don't force-destroy the device; just drop refs
+        this.device = null;
+    }
+
     //=============== PRIVATE =================//
 
     private createMSAATexture() 
     {
         if (!this.device || !this.presentationFormat || !this.canvas) return;
 
+        try { this.msaaTexture?.destroy(); } catch {} // Make sure to destroy old texture
         this.msaaTexture = this.device.createTexture({
             size: [this.canvas.width, this.canvas.height],
             sampleCount: this.sampleCount,

@@ -33,6 +33,42 @@ class Solver
     }
 
     //================================//
+    public setGravity(newGravity: glm.vec2): void
+    {
+        this.gravity = newGravity;
+    }
+
+    //================================//
+    public setAlpha(newAlpha: number): void
+    {
+        this.alpha = newAlpha;
+    }
+
+    //================================//
+    public setBeta(newBeta: number): void
+    {
+        this.beta = newBeta;
+    }
+
+    //================================//
+    public setGamma(newGamma: number): void
+    {
+        this.gamma = newGamma;
+    }
+
+    //================================//
+    public getIsPostStabilization(): boolean
+    {
+        return this.postStabilization;
+    }
+
+    //================================//
+    public setIsPostStabilization(isPostStabilization: boolean): void
+    {
+        this.postStabilization = isPostStabilization;
+    }
+
+    //================================//
     public setDefaults(): void
     {
         this.dt = 1 / 60;

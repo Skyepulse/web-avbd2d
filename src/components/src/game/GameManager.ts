@@ -26,6 +26,8 @@ class GameManager
 
     private lastFrameTime: number = 0;
 
+    private canvasClick?: (e: MouseEvent) => void;
+
     //=============== PUBLIC =================//
     constructor(canvas: HTMLCanvasElement)
     {
@@ -51,8 +53,13 @@ class GameManager
     //================================//
     public async cleanup()
     {
-        this.log("Goodbye World!");
         this.stop();
+        this.solver.Clear();
+        if (this.canvasClick && this.canvas) {
+            this.canvas.removeEventListener('click', this.canvasClick);
+            this.canvasClick = undefined;
+        }
+        await this.gameRenderer.cleanup();
     }
 
     //================================//
@@ -157,22 +164,65 @@ class GameManager
     //================================//
     public initializeWindowEvents(): void
     {
-        // Add box on click
-        window.addEventListener('click', (event: MouseEvent) => {
-            
-            // Print where in the canvas was clicked
+        if (!this.canvas) return;
+        this.canvasClick = (event: MouseEvent) => {
             if (!this.canvas) return;
-
             const rect = this.canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
-            
             const canvasX = (x / this.canvas.width) * GameRenderer.xWorldSize;
             const canvasY = (1.0 - (y / this.canvas.height)) * GameRenderer.yWorldSize;
             const pos = glm.vec3.fromValues(canvasX, canvasY, rand(0, Math.PI * 2));
-
             this.addRigidBox(pos);
-        });
+        };
+        this.canvas.addEventListener('click', this.canvasClick);
+    }
+
+    //============== PUBLIC API ==================//
+    public async restartGame()
+    {
+        this.cleanup();
+        await this.gameRenderer.initialize();
+        this.initializeWindowEvents();
+        this.startMainLoop();
+    }
+
+    // ================================== //
+    public modifyGravity(gravityx: number, gravityy: number): void
+    {
+        const gravity = glm.vec2.create();
+        glm.vec2.set(gravity, gravityx, gravityy);
+        this.solver.setGravity(gravity);
+    }
+
+    // ================================== //
+    public modifyAlpha(alpha: number): void
+    {
+        this.solver.setAlpha(alpha);
+    }
+
+    // ================================== //
+    public modifyBeta(beta: number): void
+    {
+        this.solver.setBeta(beta);
+    }
+
+    // ================================== //
+    public modifyGamma(gamma: number): void
+    {
+        this.solver.setGamma(gamma);
+    }
+
+    //================================//
+    public modifyPostStabilization(enabled: boolean): void
+    {
+        this.solver.setIsPostStabilization(enabled);
+    }
+
+    //================================//
+    public getPostStabilization(): boolean
+    {
+        return this.solver.getIsPostStabilization();
     }
 }
 

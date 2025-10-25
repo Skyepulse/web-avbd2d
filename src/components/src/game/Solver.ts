@@ -30,6 +30,11 @@ class Solver
     {
         this.bodies = [];
         this.forces = [];
+        this.contactsToRender = [];
+        
+        this.gamma = 0.99;
+        this.alpha = 0.99;
+        this.beta = 100000;
     }
 
     //================================//

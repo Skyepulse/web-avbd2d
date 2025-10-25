@@ -3,7 +3,7 @@
         <button
             id="restart-button"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
-            @click="gameManager.restartGame()"
+            @click="resetGame()"
         >
             Restart Game
         </button>
@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-    import { defineProps, ref, watch} from 'vue';
+    import { defineProps, ref, watch, onMounted } from 'vue';
     import GameManager from './src/game/GameManager';
 
     // ================================== //
@@ -109,6 +109,27 @@
 
     const gammaLabel = ref<HTMLLabelElement | null>(null);
     const gammaInput = ref<HTMLInputElement | null>(null);
+
+    // ================================== //
+    onMounted(() => {
+        initializeValues();
+    });
+
+    // ================================== //
+    function initializeValues()
+    {
+        betaLabel.value!.textContent =  betaToSlider(100000).toFixed(3);
+        betaInput.value!.value = betaToSlider(100000).toString();
+
+        gammaLabel.value!.textContent =  "0.99";
+        gammaInput.value!.value = "0.99";
+
+        alphaLabel.value!.textContent =  "0.99";
+        alphaInput.value!.value = "0.99";
+
+        gravityLabel.value!.textContent = "-9.81";
+        gravityYInput.value!.value = "-9.81";
+    }
 
     // ================================== //
     function setGravityLabel()
@@ -192,6 +213,13 @@
         if (gameManager.value) {
             gameManager.value.modifyGamma(gamma);
         }
+    }
+
+    // ================================== //
+    function resetGame()
+    {
+        gameManager.value.restartGame();
+        initializeValues();
     }
 
 </script>

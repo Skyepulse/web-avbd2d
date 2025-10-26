@@ -12,6 +12,14 @@ import RigidBox from "./RigidBox";
 import Solver from "./Solver";
 import { rand, randomPosInRectRot, randomColorUint8 } from "@src/helpers/MathUtils";
 
+// ================================== //
+export interface performanceInformation
+{
+    cpuFrameTime: number,
+    gpuFrameTime: number,
+    cpuSolverTime: number
+}
+
 //================================//
 class GameManager
 {
@@ -223,6 +231,16 @@ class GameManager
     public getPostStabilization(): boolean
     {
         return this.solver.getIsPostStabilization();
+    }
+
+    // ================================== //
+    public getPerformances(): performanceInformation
+    {
+        return {
+            cpuFrameTime: this.gameRenderer.renderTimeCPU,
+            gpuFrameTime: this.gameRenderer.renderTimeGPU,
+            cpuSolverTime: this.solver.avgStepTime
+        };
     }
 }
 

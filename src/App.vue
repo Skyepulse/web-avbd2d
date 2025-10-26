@@ -5,6 +5,12 @@
   <div id="utils" class="absolute top-2 left-2 z-10 bg-gray-800 p-2 rounded">
     <utils v-if="gameManager" :gameManager="gameManager" />
   </div>
+
+  <!-- Info -->
+  <div id="info" class="absolute top-2 right-2 z-10 bg-gray-800 p-2 rounded">
+    <info v-if="gameManager" :gameManager="gameManager" />
+  </div>
+
 </template>
 
 <script setup lang="ts">
@@ -13,6 +19,7 @@
   import { startupGame } from './components/main';
   import GameManager from './components/src/game/GameManager';
   import utils from './components/utils.vue';
+  import info from './components/info.vue';
   
   const webgpuCanvas = ref<HTMLCanvasElement | null>(null);
   const gameManager = shallowRef<GameManager | null>(null);

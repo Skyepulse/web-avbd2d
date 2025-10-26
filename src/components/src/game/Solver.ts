@@ -25,16 +25,27 @@ class Solver
 
     public contactsToRender: ContactRender[] = [];
 
+    // Performance: average step() CPU time in ms (updated every perfIntervalMs)
+    public avgStepTime: number = 0; // ms
+    private perfIntervalMs: number = 1000;
+    private perfIntervalStart: number = performance.now();
+    private perfStepCount: number = 0;
+    private perfStepAcc: number = 0; // ms accumulator
+
     //============= PUBLIC ===================//
     public Clear(): void
     {
         this.bodies = [];
         this.forces = [];
         this.contactsToRender = [];
-        
+
         this.gamma = 0.99;
         this.alpha = 0.99;
         this.beta = 100000;
+        this.gravity = glm.vec2.fromValues(0, -9.81);
+        this.dt = 1 / 60;
+        this.iterations = 10;
+        this.postStabilization = true;
     }
 
     //================================//
@@ -92,6 +103,7 @@ class Solver
     //================================//
     public step(dt: number): void
     {
+        const stepStart = performance.now();
         if (Math.abs(dt - this.dt) > 0.01)
             console.warn(`Warning: Physics timestep changed from ${this.dt} to ${dt}. This may cause instability.`);
         
@@ -296,6 +308,21 @@ class Solver
                     }
                 }
             }
+        }
+
+        // Measure step time (ms) and accumulate for averaging
+        const stepEnd = performance.now();
+        const stepMs = stepEnd - stepStart;
+        this.perfStepCount++;
+        this.perfStepAcc += stepMs;
+        const now = performance.now();
+        if (now - this.perfIntervalStart >= this.perfIntervalMs) {
+            const frames = Math.max(1, this.perfStepCount);
+            this.avgStepTime = this.perfStepAcc / frames;
+            // reset
+            this.perfIntervalStart = now;
+            this.perfStepCount = 0;
+            this.perfStepAcc = 0;
         }
     }
 

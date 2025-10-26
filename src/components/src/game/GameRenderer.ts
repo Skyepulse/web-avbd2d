@@ -30,7 +30,7 @@ const indicesPerInstance = 6;  // 2 triangles per quad
 const initialInstanceSize = 256;
 const screenUniformSize = 16; // Uniform buffers should be 16-byte aligned. We store 2 floats + 2 pad floats.
 
-//================================//
+// ================================== //
 class GameRenderer
 {
     private gameManager: GameManager | null = null;
@@ -89,6 +89,15 @@ class GameRenderer
     private msaaTexture: GPUTexture | null = null;
     private msaaView: GPUTextureView | null = null;
     private sampleCount: number = 4;
+
+    public renderTimeGPU: number = 0; //ms
+    public renderTimeCPU: number = 0; //ms
+    // Performance averaging (compute averages every `perfIntervalMs` milliseconds)
+    private perfIntervalMs: number = 1000; // ms
+    private perfIntervalStart: number = performance.now();
+    private perfFrameCount: number = 0;
+    private perfCpuAcc: number = 0; // ms accumulator
+    private perfGpuAcc: number = 0; // ms accumulator
 
     //=============== PUBLIC =================//
     constructor(canvas: HTMLCanvasElement, gameManager: GameManager)
@@ -255,10 +264,11 @@ class GameRenderer
     }
 
     //================================//
-    public render()
+    public async render()
     {
         if (!this.device || !this.context || !this.presentationFormat) return;
 
+        const startTime = performance.now();
         const textureView = this.context.getCurrentTexture().createView();
         const renderPassDescriptor: GPURenderPassDescriptor = {
             label: 'basic canvas renderPass',
@@ -315,11 +325,69 @@ class GameRenderer
             if (!res)
             {
                 this.gameManager?.logWarn("Failed to resolve timestamp query.");
-                return;
             }
         }
 
+        // Submit commands (includes resolve/copy for timestamp queries)
         this.device.queue.submit([encoder.finish()]);
+
+        // CPU-side frame time (time to prepare + submit commands)
+        const endTime = performance.now();
+        const cpuFrameMs = endTime - startTime;
+
+        // GPU-side frame time (read resolved timestamp results if available)
+        let gpuFrameMs = 0;
+        if (this.timestampQuerySet && this.timestampQuerySet.resultBuffer) {
+            try {
+                // Wait for the GPU work to complete and the result buffer to be populated.
+                // mapAsync will resolve when the buffer is ready to be mapped for reading.
+                await this.timestampQuerySet.resultBuffer.mapAsync(GPUMapMode.READ);
+                const arrayBuffer = this.timestampQuerySet.resultBuffer.getMappedRange();
+                // Each timestamp is 8 bytes (uint64). Use BigUint64Array for portability.
+                const ts = new BigUint64Array(arrayBuffer.slice(0));
+                if (ts.length >= 2) {
+                    const t0 = ts[0];
+                    const t1 = ts[1];
+                    const diffTicks = Number(t1 - t0);
+
+                    // Convert ticks -> nanoseconds using timestampPeriod if available.
+                    // Many implementations expose a timestampPeriod (nanoseconds per tick),
+                    // but it isn't standardized on the GPUDevice type in TS. Try common locations,
+                    // otherwise assume ticks are nanoseconds (period = 1).
+                    let timestampPeriodNs = 1; // fallback: ticks == ns
+                    try {
+                        const maybe = (this.device as any).timestampPeriod ?? (this.device as any).limits?.timestampPeriod ?? (this.device as any).adapter?.timestampPeriod;
+                        if (typeof maybe === 'number' && Number.isFinite(maybe) && maybe > 0) timestampPeriodNs = maybe;
+                    } catch {}
+
+                    const ns = diffTicks * timestampPeriodNs;
+                    gpuFrameMs = ns / 1e6;
+                }
+                this.timestampQuerySet.resultBuffer.unmap();
+            } catch (e:any) {
+                // Best-effort: don't block rendering on timing failures
+                this.gameManager?.logWarn(`Failed to read GPU timestamps: ${e?.message ?? e}`);
+            }
+        }
+
+        // Accumulate into interval stats
+        this.perfFrameCount++;
+        this.perfCpuAcc += cpuFrameMs;
+        this.perfGpuAcc += gpuFrameMs;
+
+        const now = performance.now();
+        if (now - this.perfIntervalStart >= this.perfIntervalMs) {
+            // compute averages
+            const frames = Math.max(1, this.perfFrameCount);
+            this.renderTimeCPU = this.perfCpuAcc / frames;
+            this.renderTimeGPU = this.perfGpuAcc / frames;
+
+            // reset accumulators
+            this.perfIntervalStart = now;
+            this.perfFrameCount = 0;
+            this.perfCpuAcc = 0;
+            this.perfGpuAcc = 0;
+        }
     }
 
     // ================================== //

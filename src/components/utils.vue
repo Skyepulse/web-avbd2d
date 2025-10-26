@@ -7,7 +7,8 @@
         >
             Restart Game
         </button>
-        <label>
+        <div class="w-90% h-0.5 bg-amber-50 mt-2"></div>
+        <label class="font-bold text-lg">
             Solver Values:
         </label>
         <div id="gravity-picker" class="flex flex-row space-x-1">
@@ -118,17 +119,33 @@
     // ================================== //
     function initializeValues()
     {
-        betaLabel.value!.textContent =  betaToSlider(100000).toFixed(3);
-        betaInput.value!.value = betaToSlider(100000).toString();
+        if(!betaLabel.value || !betaInput.value)
+        {
+            return;
+        }
+        betaLabel.value.textContent =  '100000';
+        betaInput.value.value = betaToSlider(100000).toString();
 
-        gammaLabel.value!.textContent =  "0.99";
-        gammaInput.value!.value = "0.99";
+        if(!gammaLabel.value || !gammaInput.value)
+        {
+            return;
+        }
+        gammaLabel.value.textContent =  "0.99";
+        gammaInput.value.value = "0.99";
 
-        alphaLabel.value!.textContent =  "0.99";
-        alphaInput.value!.value = "0.99";
+        if(!gravityLabel.value || !gravityYInput.value)
+        {
+            return;
+        }
+        gravityLabel.value.textContent = "-9.81";
+        gravityYInput.value.value = "-9.81";
 
-        gravityLabel.value!.textContent = "-9.81";
-        gravityYInput.value!.value = "-9.81";
+        if(!alphaLabel.value || !alphaInput.value || !gameManager.value || gameManager.value.getPostStabilization())
+        { 
+            return;
+        }
+        alphaLabel.value.textContent =  "0.99";
+        alphaInput.value.value = "0.99";
     }
 
     // ================================== //

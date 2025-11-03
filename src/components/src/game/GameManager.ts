@@ -51,13 +51,13 @@ class GameManager
         this.solver = new Solver();
 
         this.solver.setDefaults();
+
+        document.addEventListener("visibilitychange", this.handleAppVisibility.bind(this));
     }
 
     //================================//
     public async initialize()
     {
-        this.log("Hello World!");
-        // Game Renderer
         await this.LoadLevel(2);
         this.CurrentLevelID = 2;
     }
@@ -86,7 +86,6 @@ class GameManager
     public reset(): void {
         this.stop();
         this.solver.Clear();
-        this.solver.setDefaults();
 
         if (this.canvasClick && this.canvas) {
             this.canvas.removeEventListener("click", this.canvasClick);
@@ -198,6 +197,39 @@ class GameManager
         this.rafID = requestAnimationFrame(frame);
     }
 
+    // ================================== //
+    private async handleAppVisibility() {
+        const hidden =
+            document.hidden;
+
+        if (hidden) {
+            console.log("Tab hidden — pausing main loop and GPU work.");
+            this.stop();
+
+            // Wait for GPU queue to finish any pending work
+            if (this.gameRenderer.device) {
+                try {
+                    await Promise.race([
+                        this.gameRenderer.device.queue.onSubmittedWorkDone(),
+                        new Promise((_, reject) => setTimeout(() => reject("Timeout waiting for GPU idle"), 1000))
+                    ]);
+                } catch (e) {
+                    this.logWarn("GPU sync during background pause failed: " + e);
+                }
+            }
+        } else {
+            console.log("Tab visible again — restarting main loop.");
+            // Re-acquire texture view, recreate MSAA if needed
+            try {
+                this.gameRenderer.recreateContextIfNeeded();
+            } catch (e) {
+                this.logWarn("Recreating WebGPU context failed: " + e);
+            }
+            this.startMainLoop();
+        }
+    }
+
+
     //================================//
     public addRigidBox(
         pos: glm.vec3 = randomPosInRectRot(0, 0, GameRenderer.xWorldSize, GameRenderer.yWorldSize), 
@@ -261,6 +293,12 @@ class GameManager
     }
 
     // ================================== //
+    public setSolverDefaults(): void
+    {
+        this.solver.setDefaults();
+    }
+
+    // ================================== //
     public modifyGravity(gravityx: number, gravityy: number): void
     {
         const gravity = glm.vec2.create();
@@ -284,6 +322,14 @@ class GameManager
     public modifyGamma(gamma: number): void
     {
         this.solver.setGamma(gamma);
+    }
+
+    // ================================== //
+    public modifyIterations(iterations: number): void
+    {
+        if (iterations < 1) iterations = 1;
+
+        this.solver.iterations = iterations;
     }
 
     //================================//

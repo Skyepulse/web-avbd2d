@@ -12,7 +12,7 @@ class Solver
 {
     public dt: number = 0;
     public gravity: glm.vec2 = glm.vec2.fromValues(0, -9.81);
-    public iterations: number = 0;
+    public iterations: number = 10;
 
     public alpha: number = 0.99;
     public beta: number = 100000;
@@ -49,20 +49,13 @@ class Solver
             b.destroy();
         }
 
-        this.gamma = 0.99;
-        this.alpha = 0.99;
-        this.beta = 100000;
-        this.gravity = glm.vec2.fromValues(0, -9.81);
         this.dt = 1 / 60;
-        this.iterations = 10;
         this.postStabilization = true;
 
         this.avgStepTime = 0;
         this.perfStepCount = 0;
         this.perfStepAcc = 0;
         this.perfIntervalStart = performance.now();
-
-        console.log("Solver fully cleared with destructors.");
     }
 
     //================================//
@@ -233,7 +226,10 @@ class Solver
         for (let iter = 0; iter < iterations; ++iter)
         {
             let currentAlpha: number = this.alpha;
-            if (this.postStabilization) currentAlpha = iter < this.iterations ? 1 : 0;
+            if (this.postStabilization) 
+            {
+                currentAlpha = iter < this.iterations ? 1 : 0;
+            }
 
             // PRIMAL FIRST
             for (const body of this.bodies)

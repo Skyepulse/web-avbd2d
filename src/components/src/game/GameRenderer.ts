@@ -483,6 +483,28 @@ class GameRenderer
         this.timestampQuerySet = null;
     }
 
+    // ================================== //
+    public recreateContextIfNeeded() {
+        if (!this.canvas || !this.device) return;
+
+        try {
+            if (!this.context) {
+                this.context = this.canvas.getContext("webgpu");
+            }
+            if (this.context) {
+                this.context.configure({
+                    device: this.device,
+                    format: navigator.gpu.getPreferredCanvasFormat(),
+                    alphaMode: "premultiplied"
+                });
+                this.createMSAATexture();
+            }
+        } catch (e) {
+            console.warn("WebGPU context reconfiguration failed:", e);
+        }
+    }
+
+
     //=============== PRIVATE =================//
 
     private createMSAATexture() 

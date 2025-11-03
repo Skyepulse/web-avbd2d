@@ -11,6 +11,13 @@
         <label class="font-bold text-lg">
             Solver Values:
         </label>
+        <button
+            id="reset-values-button"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+            @click="resetValues()"
+        >
+            Reset Values
+        </button>
         <div id="gravity-picker" class="flex flex-row space-x-1">
             <label>Gravity:</label>
             <input
@@ -24,6 +31,18 @@
             @change="setGravity()"
             />
             <label id="gravityValue" ref="gravityLabel">-9.81</label>
+        </div>
+        <div id="iteration-picker" class="flex flex-row space-x-1">
+            <label>Iterations:</label>
+            <input
+            ref="iterationsInput"
+            id="iterations"
+            type="number"
+            value="10"
+            min="1"
+            max="100"
+            @change="setIterations()"
+            />
         </div>
         <div id="alpha-picker" class="flex flex-row space-x-1" v-if ="gameManager && !gameManager.getPostStabilization()">
             <label>Alpha:</label>
@@ -111,6 +130,8 @@
     const gammaLabel = ref<HTMLLabelElement | null>(null);
     const gammaInput = ref<HTMLInputElement | null>(null);
 
+    const iterationsInput = ref<HTMLInputElement | null>(null);
+
     // ================================== //
     onMounted(() => {
         initializeValues();
@@ -140,6 +161,12 @@
         gravityLabel.value.textContent = "-9.81";
         gravityYInput.value.value = "-9.81";
 
+        if(!iterationsInput.value)
+        {
+            return;
+        }
+        iterationsInput.value.value = "10";
+
         if(!alphaLabel.value || !alphaInput.value || !gameManager.value || gameManager.value.getPostStabilization())
         { 
             return;
@@ -161,6 +188,16 @@
 
         if (gameManager.value ) {
             gameManager.value.modifyGravity(0.0, gravityY);
+        }
+    }
+
+    // ================================== //
+    function setIterations()
+    {
+        const iterations = parseInt(iterationsInput.value!.value);
+
+        if (gameManager.value ) {
+            gameManager.value.modifyIterations(iterations);
         }
     }
 
@@ -236,6 +273,14 @@
     function resetGame()
     {
         gameManager.value.setRestartFlag();
+    }
+
+    // ================================== //
+    function resetValues()
+    {
+        if (gameManager.value) {
+            gameManager.value.setSolverDefaults();
+        }
         initializeValues();
     }
 

@@ -11,6 +11,7 @@ import GameRenderer from "./GameRenderer";
 import RigidBox from "./RigidBox";
 import Solver from "./Solver";
 import { rand, randomPosInRectRot, randomColorUint8 } from "@src/helpers/MathUtils";
+import { useLevels } from '@src/helpers/Levels';
 
 // ================================== //
 export interface performanceInformation
@@ -35,6 +36,12 @@ class GameManager
     private lastFrameTime: number = 0;
 
     private canvasClick?: (e: MouseEvent) => void;
+    private windowRestart?: (e: KeyboardEvent) => void;
+
+    private ParsedLevels = useLevels().parsedLevels;
+
+    public CurrentLevelID: number = 1;
+    private shouldRestart: boolean = false;
 
     //=============== PUBLIC =================//
     constructor(canvas: HTMLCanvasElement)
@@ -50,12 +57,9 @@ class GameManager
     public async initialize()
     {
         this.log("Hello World!");
-
         // Game Renderer
-        await this.gameRenderer.initialize();
-        this.initializeWindowEvents();
-
-        this.startMainLoop();
+        await this.LoadLevel(2);
+        this.CurrentLevelID = 2;
     }
 
     //================================//
@@ -63,11 +67,38 @@ class GameManager
     {
         this.stop();
         this.solver.Clear();
+        this.solver.setDefaults();
+
         if (this.canvasClick && this.canvas) {
             this.canvas.removeEventListener('click', this.canvasClick);
             this.canvasClick = undefined;
         }
+
+        if (this.windowRestart) {
+            window.removeEventListener("keydown", this.windowRestart);
+            this.windowRestart = undefined;
+        }
+
         await this.gameRenderer.cleanup();
+    }
+
+    // ================================== //
+    public reset(): void {
+        this.stop();
+        this.solver.Clear();
+        this.solver.setDefaults();
+
+        if (this.canvasClick && this.canvas) {
+            this.canvas.removeEventListener("click", this.canvasClick);
+            this.canvasClick = undefined;
+        }
+
+        if (this.windowRestart) {
+            window.removeEventListener("keydown", this.windowRestart);
+            this.windowRestart = undefined;
+        }
+
+        this.gameRenderer.reset();
     }
 
     //================================//
@@ -112,17 +143,23 @@ class GameManager
         }
         this.running = true;
 
-        // Static ground box
-        const staticBoxPosition = glm.vec3.fromValues(GameRenderer.xWorldSize * 0.5, 8, 0);
-        const staticBoxScale = glm.vec2.fromValues(GameRenderer.xWorldSize - 20, 10);
-        this.addRigidBox(staticBoxPosition, staticBoxScale, glm.vec3.fromValues(0,0,0), new Uint8Array([200,200,200,255]), true);
-
         const fixedStep = 1 / 60; // 60 Hz physics
         let accumulator = 0;
-        this.lastFrameTime = performance.now();
+
+        this.lastFrameTime = 0;
 
         const frame = (time: number) => {
             if (!this.running) return;
+
+            if (this.lastFrameTime === 0) {
+                this.lastFrameTime = time;
+            }
+
+            if (this.shouldRestart) {
+                this.shouldRestart = false;
+                this.restartGame();
+                return;
+            }
 
             const dt = (time - this.lastFrameTime) / 1000;
             this.lastFrameTime = time;
@@ -138,6 +175,16 @@ class GameManager
             for (let i = 0; i < this.solver.bodies.length; ++i) {
                 const body = this.solver.bodies[i];
                 const pos = body.getPosition();
+
+                if (pos[0] < -GameRenderer.xWorldLimit || pos[0] > GameRenderer.xWorldLimit ||
+                    pos[1] < -GameRenderer.yWorldLimit || pos[1] > GameRenderer.yWorldLimit) 
+                {
+                    this.solver.removeRigidBox(body);
+                    this.gameRenderer.removeInstance(body.id);
+                    this.log(`Removed body ID ${body.id} for going out of bounds.`);
+                    continue;
+                }
+
                 const posArray = new Float32Array([pos[0], pos[1], pos[2]]);
                 this.gameRenderer.updateInstancePosition(body.id, posArray);
             }
@@ -184,15 +231,33 @@ class GameManager
             this.addRigidBox(pos);
         };
         this.canvas.addEventListener('click', this.canvasClick);
+
+        // restart game on r pressed
+        this.windowRestart = (event: KeyboardEvent) => {
+            if (event.key === 'r' || event.key === 'R') {
+                this.restartGame();
+            }
+        };
+        window.addEventListener('keydown', this.windowRestart);
     }
 
     //============== PUBLIC API ==================//
     public async restartGame()
     {
-        this.cleanup();
-        await this.gameRenderer.initialize();
-        this.initializeWindowEvents();
-        this.startMainLoop();
+        await this.LoadLevel(this.CurrentLevelID);
+    }
+
+    // ================================== //
+    public changeLevel(levelID: number): void
+    {
+        this.CurrentLevelID = levelID;
+        this.setRestartFlag();
+    }
+
+    // ================================== //
+    public setRestartFlag(): void
+    {
+        this.shouldRestart = true;
     }
 
     // ================================== //
@@ -241,6 +306,53 @@ class GameManager
             gpuFrameTime: this.gameRenderer.renderTimeGPU,
             cpuSolverTime: this.solver.avgStepTime
         };
+    }
+
+    // ================================== //
+    public async LoadLevel(levelID: number): Promise<void>
+    {
+        // If levelID is invalid, load the first available level
+        const level = this.ParsedLevels?.find(l => l.id === levelID) || this.ParsedLevels?.[0];
+        if (!level) {
+            this.logWarn("No levels available to load.");
+            return;
+        }
+
+        // Cleanup
+        this.reset();
+        if (!this.gameRenderer.isInitialized()) {
+            await this.gameRenderer.initialize(); // first load only
+        }
+
+        this.initializeWindowEvents();
+
+        // Load Static Objects (mass = 0)
+        level.Scene.Static?.forEach(obj => {
+            const pos = glm.vec3.fromValues(GameRenderer.xWorldSize / 2 + obj.Position[0], GameRenderer.yWorldSize / 2 + obj.Position[1], obj.Rotation);
+            const scale = glm.vec2.fromValues(obj.Scale[0], obj.Scale[1]);
+            const colorArr = new Uint8Array(4);
+            const color = obj.Color;
+            colorArr[0] = parseInt(color.slice(1, 3), 16);
+            colorArr[1] = parseInt(color.slice(3, 5), 16);
+            colorArr[2] = parseInt(color.slice(5, 7), 16);
+            colorArr[3] = 255;
+            this.addRigidBox(pos, scale, glm.vec3.fromValues(0, 0, 0), colorArr, true);
+        });
+
+        // Load Dynamic Objects (mass > 0)
+        level.Scene.Dynamic?.forEach(obj => {
+            const pos = glm.vec3.fromValues(GameRenderer.xWorldSize / 2 + obj.Position[0], GameRenderer.yWorldSize / 2 + obj.Position[1], obj.Rotation);
+            const scale = glm.vec2.fromValues(obj.Scale[0], obj.Scale[1]);
+            const colorArr = new Uint8Array(4);
+            const color = obj.Color;
+            colorArr[0] = parseInt(color.slice(1, 3), 16);
+            colorArr[1] = parseInt(color.slice(3, 5), 16);
+            colorArr[2] = parseInt(color.slice(5, 7), 16);
+            colorArr[3] = 255;
+            this.addRigidBox(pos, scale, glm.vec3.fromValues(0, 0, 0), colorArr, false);
+        });
+
+        this.startMainLoop();
     }
 }
 

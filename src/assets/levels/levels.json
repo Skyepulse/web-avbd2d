@@ -1,0 +1,88 @@
+{
+    "Levels": [
+        {
+            "LevelID": 1,
+            "LevelName": "Test",
+            "Scene": {
+                "Static": [
+                    { "Position": [0, -20], "Rotation": [0], "Scale": [60, 5], "Color": "#FFFFFF" }
+                ]
+            }
+        },
+        {
+            "LevelID": 2,
+            "LevelName": "Pyramid",
+            "Scene": {
+                "Static": [
+                    { "Position": [0, -20], "Rotation": [0], "Scale": [60, 5], "Color": "#FFFFFF" }
+                ],
+                "Dynamic": [
+                    { "Position": [-22.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-17.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-12.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-7.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-2.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [2.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [7.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [12.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [17.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [22.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-20, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-15, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-10, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-5, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [0, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [5, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [10, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [15, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [20, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-17.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-12.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-7.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-2.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [2.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [7.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [12.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [17.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-15, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-10, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-5, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [0, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [5, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [10, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [15, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-12.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-7.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-2.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [2.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [7.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [12.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-10, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-5, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [0, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [5, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [10, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-7.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-2.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [2.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [7.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-5, 11], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [0, 11], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [5, 11], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [-2.5, 14], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [2.5, 14], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+
+                    { "Position": [0, 17], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" }
+                ]
+            }
+        }
+    ]
+}

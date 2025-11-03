@@ -235,7 +235,7 @@
     // ================================== //
     function resetGame()
     {
-        gameManager.value.restartGame();
+        gameManager.value.setRestartFlag();
         initializeValues();
     }
 

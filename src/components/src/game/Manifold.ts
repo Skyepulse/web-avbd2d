@@ -642,6 +642,14 @@ class Manifold extends Force
         return renders;
     }
 
+    // ================================== //
+    public override destroy(): void {
+        this.contacts.length = 0;
+        this.oldContacts.length = 0;
+
+        super.destroy();
+    }
+
     //================================//
     public getRows(): number { return this.contacts.length * 2; }
 }

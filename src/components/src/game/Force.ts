@@ -95,6 +95,34 @@ class Force
         console.warn("This method should not be called directly.");
         return [];
     }
+
+    // ================================== //
+    public destroy(): void {
+        // Break mutual links - remove this force from both bodies
+        if (this.bodyA) {
+            const i = this.bodyA.forces.indexOf(this);
+            if (i !== -1) this.bodyA.forces.splice(i, 1);
+        }
+        if (this.bodyB) {
+            const i = this.bodyB.forces.indexOf(this);
+            if (i !== -1) this.bodyB.forces.splice(i, 1);
+        }
+
+        // Nullify references AFTER removing from arrays to help GC
+        this.bodyA = null as any;
+        this.bodyB = null as any;
+
+        // Release arrays
+        this.J.length = 0;
+        this.H.length = 0;
+        this.C.length = 0;
+        this.fmin.length = 0;
+        this.fmax.length = 0;
+        this.stiffness.length = 0;
+        this.fracture.length = 0;
+        this.penalty.length = 0;
+        this.lambda.length = 0;
+    }
 }
 
 export default Force;

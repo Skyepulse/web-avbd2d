@@ -104,6 +104,36 @@ class RigidBox
 
         return false;
     }
+
+    // ================================== //
+    public removeForce(force: Force): void
+    {
+        const index = this.forces.indexOf(force);
+        if (index !== -1) {
+            this.forces.splice(index, 1);
+        }
+    }
+
+    // ================================== //
+    public getAllForces(): Force[]
+    {
+        return this.forces;
+    }
+
+    // ================================== //
+    public destroy(): void {
+        const forcesToDestroy = [...this.forces];
+        
+        this.forces.length = 0;
+        
+        for (const f of forcesToDestroy) {
+            f.destroy();
+        }
+
+        this.prevVelocity = glm.vec3.create();
+        this.inertial = glm.vec3.create();
+        this.lastPosition = glm.vec3.create();
+    }
 }
 
 export default RigidBox;

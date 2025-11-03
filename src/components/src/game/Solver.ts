@@ -33,11 +33,21 @@ class Solver
     private perfStepAcc: number = 0; // ms accumulator
 
     //============= PUBLIC ===================//
-    public Clear(): void
-    {
-        this.bodies = [];
-        this.forces = [];
+    public Clear(): void {
+        const forcesToDestroy = [...this.forces];
+        const bodiesToDestroy = [...this.bodies];
+        
+        this.forces.length = 0;
+        this.bodies.length = 0;
         this.contactsToRender = [];
+        
+        for (const f of forcesToDestroy) {
+            f.destroy();
+        }
+        
+        for (const b of bodiesToDestroy) {
+            b.destroy();
+        }
 
         this.gamma = 0.99;
         this.alpha = 0.99;
@@ -46,6 +56,13 @@ class Solver
         this.dt = 1 / 60;
         this.iterations = 10;
         this.postStabilization = true;
+
+        this.avgStepTime = 0;
+        this.perfStepCount = 0;
+        this.perfStepAcc = 0;
+        this.perfIntervalStart = performance.now();
+
+        console.log("Solver fully cleared with destructors.");
     }
 
     //================================//
@@ -337,8 +354,21 @@ class Solver
     public removeRigidBox(box: RigidBox): void
     {
         const index = this.bodies.indexOf(box);
+        
+        const forces = [...box.getAllForces()];
+
+        for (const f of forces)
+        {
+            const idx = this.forces.indexOf(f);
+            if (idx !== -1) this.forces.splice(idx, 1);
+            
+            f.destroy();
+        }
+
         if (index !== -1)
             this.bodies.splice(index, 1);
+        
+        box.destroy();
     }
 }
 

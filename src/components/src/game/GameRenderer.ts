@@ -36,7 +36,7 @@ class GameRenderer
     private gameManager: GameManager | null = null;
 
     private canvas: HTMLCanvasElement | null = null;
-    private device: GPUDevice | null = null;
+    public device: GPUDevice | null = null;
     private context: GPUCanvasContext | null = null;
     private presentationFormat: GPUTextureFormat | null = null;
     private observer: ResizeObserver | null = null;
@@ -67,6 +67,7 @@ class GameRenderer
     private screenBindGroup: GPUBindGroup | null = null;
 
     private changingCpuArray: Float32Array = new Float32Array(initialInstanceSize * (positionSize + scaleSize) / 4);
+    private staticCpuArray: Uint8Array = new Uint8Array(initialInstanceSize * 4); // RGBA per instance
 
     // Members
     private numInstances: number = 0;
@@ -78,12 +79,15 @@ class GameRenderer
     // Contact points
     private contactPositions: Float32Array = new Float32Array(0);
     private numContacts: number = 0;
-    private maxContacts: number = 128;
+    private maxContacts: number = 2048;
     private contactIndicesPerInstance: number = 0;
 
     // Static world size (matches physics world)
     static xWorldSize: number = 100;
     static yWorldSize: number = 60;
+
+    static xWorldLimit: number = 400;
+    static yWorldLimit: number = 300;
 
     // Texture to render with MSAA
     private msaaTexture: GPUTexture | null = null;
@@ -98,6 +102,9 @@ class GameRenderer
     private perfFrameCount: number = 0;
     private perfCpuAcc: number = 0; // ms accumulator
     private perfGpuAcc: number = 0; // ms accumulator
+
+    private initialized: boolean = false;
+    public isInitialized(): boolean { return this.initialized; }
 
     //=============== PUBLIC =================//
     constructor(canvas: HTMLCanvasElement, gameManager: GameManager)
@@ -156,6 +163,9 @@ class GameRenderer
         this.buildBuffers();
         this.initializePipeline();
         this.initializeContactPipeline();
+
+        console.log("GameRenderer initialized with WebGPU.");
+        this.initialized = true;
     }
 
     //================================//
@@ -177,7 +187,8 @@ class GameRenderer
 
         instanceIndex = this.numInstances++;
 
-        this.device.queue.writeBuffer(this.staticBuffer, instanceIndex * colorSize, color as BufferSource);
+        this.staticCpuArray.set(color, instanceIndex * 4);
+        this.device.queue.writeBuffer(this.staticBuffer, instanceIndex * colorSize, this.staticCpuArray as BufferSource, instanceIndex * 4, 4);
 
         const id = this.nextId++;
         this.indexToId[instanceIndex] = id;
@@ -199,32 +210,44 @@ class GameRenderer
 
         const lastIndex = this.numInstances - 1;
 
-        if (instanceIndex !== lastIndex) // Need to swap with last
+        if (instanceIndex !== lastIndex)
         {
-            const commandEncoder = this.device.createCommandEncoder({ label: 'Remove instance encoder' });
+            // --- Swap color on CPU and re-upload --- //
+            const colorSrcOffset = lastIndex * 4;
+            const colorDstOffset = instanceIndex * 4;
+            this.staticCpuArray.set(
+                this.staticCpuArray.subarray(colorSrcOffset, colorSrcOffset + 4),
+                colorDstOffset
+            );
+            this.device.queue.writeBuffer(
+                this.staticBuffer,
+                instanceIndex * colorSize,
+                this.staticCpuArray as BufferSource,
+                colorDstOffset,
+                4
+            );
 
-            commandEncoder.copyBufferToBuffer(this.staticBuffer, lastIndex * colorSize, this.staticBuffer, instanceIndex * colorSize, colorSize);
-            this.device.queue.submit([commandEncoder.finish()]);
-
+            // --- Swap transform data --- //
             const a = this.changingCpuArray;
             const floatsPerInstance = (positionSize + scaleSize) / 4;
             const dstBase = instanceIndex * floatsPerInstance;
             const srcBase = lastIndex * floatsPerInstance;
-                for (let k = 0; k < floatsPerInstance; k++) {
+            for (let k = 0; k < floatsPerInstance; k++) {
                 a[dstBase + k] = a[srcBase + k];
             }
 
+            // --- Update ID mappings --- //
             const movedId = this.indexToId[lastIndex];
             this.indexToId[instanceIndex] = movedId;
             this.idToIndexMap.set(movedId, instanceIndex);
         }
 
-        // In any case, pop the last
+        // --- Remove last --- //
         this.idToIndexMap.delete(id);
         this.indexToId.pop();
         this.numInstances--;
     }
-
+    
     //================================//
     public updateInstanceScale(id: number, scale: Float32Array): void
     {
@@ -339,32 +362,48 @@ class GameRenderer
         let gpuFrameMs = 0;
         if (this.timestampQuerySet && this.timestampQuerySet.resultBuffer) {
             try {
-                // Wait for the GPU work to complete and the result buffer to be populated.
-                // mapAsync will resolve when the buffer is ready to be mapped for reading.
-                await this.timestampQuerySet.resultBuffer.mapAsync(GPUMapMode.READ);
-                const arrayBuffer = this.timestampQuerySet.resultBuffer.getMappedRange();
-                // Each timestamp is 8 bytes (uint64). Use BigUint64Array for portability.
-                const ts = new BigUint64Array(arrayBuffer.slice(0));
-                if (ts.length >= 2) {
-                    const t0 = ts[0];
-                    const t1 = ts[1];
-                    const diffTicks = Number(t1 - t0);
+                // Ensure the buffer isn't being mapped or written by the GPU
+                // before copying and mapping.
+                if (this.timestampQuerySet.resultBuffer.mapState === "unmapped") {
+                    // Copy from the GPU-resolved query buffer into the readable buffer.
+                    const encoder2 = this.device.createCommandEncoder({ label: "timestamp copy encoder" });
+                    encoder2.copyBufferToBuffer(
+                        this.timestampQuerySet.resolveBuffer,
+                        0,
+                        this.timestampQuerySet.resultBuffer,
+                        0,
+                        this.timestampQuerySet.resultBuffer.size
+                    );
+                    this.device.queue.submit([encoder2.finish()]);
 
-                    // Convert ticks -> nanoseconds using timestampPeriod if available.
-                    // Many implementations expose a timestampPeriod (nanoseconds per tick),
-                    // but it isn't standardized on the GPUDevice type in TS. Try common locations,
-                    // otherwise assume ticks are nanoseconds (period = 1).
-                    let timestampPeriodNs = 1; // fallback: ticks == ns
-                    try {
-                        const maybe = (this.device as any).timestampPeriod ?? (this.device as any).limits?.timestampPeriod ?? (this.device as any).adapter?.timestampPeriod;
-                        if (typeof maybe === 'number' && Number.isFinite(maybe) && maybe > 0) timestampPeriodNs = maybe;
-                    } catch {}
+                    // Wait for the GPU to finish writing so we can map safely.
+                    await this.timestampQuerySet.resultBuffer.mapAsync(GPUMapMode.READ);
 
-                    const ns = diffTicks * timestampPeriodNs;
-                    gpuFrameMs = ns / 1e6;
+                    const arrayBuffer = this.timestampQuerySet.resultBuffer.getMappedRange();
+                    // Each timestamp is 8 bytes (uint64). Use BigUint64Array for portability.
+                    const ts = new BigUint64Array(arrayBuffer.slice(0));
+                    if (ts.length >= 2) {
+                        const t0 = ts[0];
+                        const t1 = ts[1];
+                        const diffTicks = Number(t1 - t0);
+
+                        // Convert ticks -> nanoseconds using timestampPeriod if available.
+                        let timestampPeriodNs = 1; // fallback: ticks == ns
+                        try {
+                            const maybe =
+                                (this.device as any).timestampPeriod ??
+                                (this.device as any).limits?.timestampPeriod ??
+                                (this.device as any).adapter?.timestampPeriod;
+                            if (typeof maybe === "number" && Number.isFinite(maybe) && maybe > 0)
+                                timestampPeriodNs = maybe;
+                        } catch {}
+
+                        const ns = diffTicks * timestampPeriodNs;
+                        gpuFrameMs = ns / 1e6;
+                    }
+                    this.timestampQuerySet.resultBuffer.unmap();
                 }
-                this.timestampQuerySet.resultBuffer.unmap();
-            } catch (e:any) {
+            } catch (e: any) {
                 // Best-effort: don't block rendering on timing failures
                 this.gameManager?.logWarn(`Failed to read GPU timestamps: ${e?.message ?? e}`);
             }
@@ -391,51 +430,57 @@ class GameRenderer
     }
 
     // ================================== //
+    public reset(): void {
+        this.numInstances = 0;
+        this.idToIndexMap.clear();
+        this.indexToId = [];
+        this.numContacts = 0;
+        this.contactPositions = new Float32Array(0);
+        this.changingCpuArray.fill(0);
+        this.staticCpuArray.fill(0);
+    }
+
+    // ================================== //
     public async cleanup() {
-        // Stop using device first
+        // Wait for GPU to finish any pending work
+        if (this.device) {
+            try { await this.device.queue.onSubmittedWorkDone(); } catch {}
+        }
+
         this.numInstances = 0;
         this.idToIndexMap.clear();
         this.indexToId = [];
         this.changingCpuArray = new Float32Array(this.maxInstances * (positionSize + scaleSize) / 4);
+        this.staticCpuArray = new Uint8Array(this.maxInstances * 4);
         this.numContacts = 0;
         this.contactPositions = new Float32Array(0);
 
-        // Disconnect ResizeObserver
         if (this.observer && this.canvas) {
             this.observer.unobserve(this.canvas);
             this.observer.disconnect();
             this.observer = null;
         }
 
-        // Destroy GPU resources if present
         const destroy = (b?: GPUBuffer | null) => { try { b?.destroy(); } catch {} };
-        destroy(this.vertexBuffer);        this.vertexBuffer = null;
-        destroy(this.indexBuffer);         this.indexBuffer = null;
-        destroy(this.staticBuffer);        this.staticBuffer = null;
-        destroy(this.changingBuffer);      this.changingBuffer = null;
+        destroy(this.vertexBuffer); this.vertexBuffer = null;
+        destroy(this.indexBuffer); this.indexBuffer = null;
+        destroy(this.staticBuffer); this.staticBuffer = null;
+        destroy(this.changingBuffer); this.changingBuffer = null;
         destroy(this.contactVertexBuffer); this.contactVertexBuffer = null;
-        destroy(this.contactIndexBuffer);  this.contactIndexBuffer = null;
+        destroy(this.contactIndexBuffer); this.contactIndexBuffer = null;
         destroy(this.contactPositionBuffer); this.contactPositionBuffer = null;
         destroy(this.screenUniformBuffer); this.screenUniformBuffer = null;
 
-        // Release textures
-        this.msaaView = null;
         try { this.msaaTexture?.destroy(); } catch {}
         this.msaaTexture = null;
+        this.msaaView = null;
 
-        // Null pipelines/shaders/query sets so GC can collect
         this.CubesPipeline = null;
         this.ContactPipeline = null;
         this.CubesShaderModule = null;
         this.ContactShaderModule = null;
         this.cubePipelineLayout = null;
         this.timestampQuerySet = null;
-
-        // Context/device references
-        this.context = null;
-        this.presentationFormat = null;
-        // don't force-destroy the device; just drop refs
-        this.device = null;
     }
 
     //=============== PRIVATE =================//
@@ -558,6 +603,10 @@ class GameRenderer
         const oldChangingArray = this.changingCpuArray;
         this.changingCpuArray = new Float32Array(this.maxInstances * (positionSize + scaleSize) / 4);
         this.changingCpuArray.set(oldChangingArray);
+
+        const oldStaticArray = this.staticCpuArray;
+        this.staticCpuArray = new Uint8Array(this.maxInstances * 4);
+        this.staticCpuArray.set(oldStaticArray);
 
         this.staticBuffer.destroy();
         this.changingBuffer.destroy();

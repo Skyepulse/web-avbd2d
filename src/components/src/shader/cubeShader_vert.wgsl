@@ -10,6 +10,9 @@ struct vertexStruct {
 struct OurVertexShaderOutput {
     @builtin(position) position: vec4f,
     @location(0) @interpolate(perspective) color: vec4f,
+    @location(1) @interpolate(perspective) localPos: vec2f,
+    @location(2) @interpolate(perspective) scale: vec2f,
+    @location(3) @interpolate(perspective) rotation: f32,
 };
 
 // ============================== //
@@ -45,5 +48,8 @@ fn vs(
 
     out.position = vec4f(ndc, 0.0, 1.0);
     out.color = vert.color;
+    out.localPos = vec2f(rotatedX, rotatedY);
+    out.scale = vert.scale;
+    out.rotation = rotation;
     return out;
 }

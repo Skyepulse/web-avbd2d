@@ -1,5 +1,5 @@
 <template>
-    <div id="vertical-flex-box" class="flex flex-col space-y-2 mb-2">
+    <div id="vertical-flex-box" class="flex flex-col space-y-2 mb-2 w-[300px]">
         <button
             id="restart-button"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
@@ -98,12 +98,22 @@
             />
             <label id="gammaValue" ref="gammaLabel">0.99</label>
         </div>
+        <div class="w-90% h-0.5 bg-amber-50 mt-2"></div>
+        <label class="font-bold text-lg">
+            Select Level:
+        </label>
+        <select id="level-select" class="border border-gray-300 rounded p-1" @change="changeLevel">
+            <option v-for="level in parsedLevels" :key="level.id" :value="level.id" class="bg-black">
+                {{ level.title }}
+            </option>
+        </select>
     </div>
 </template>
 
 <script setup lang="ts">
     import { defineProps, ref, watch, onMounted } from 'vue';
     import GameManager from './src/game/GameManager';
+    import { useLevels } from '@src/helpers/Levels';
 
     // ================================== //
     const props = defineProps<{
@@ -112,6 +122,7 @@
 
     // ================================== //
     const gameManager = ref(props.gameManager);
+    const { parsedLevels } = useLevels();
 
     // ================================== //
     watch(() => props.gameManager, (newGameManager) => {
@@ -282,6 +293,16 @@
             gameManager.value.setSolverDefaults();
         }
         initializeValues();
+    }
+
+    // ================================== //
+    function changeLevel(event: Event)
+    {
+        const selectedLevelID = parseInt((event.target as HTMLSelectElement).value);
+
+        if (gameManager.value) {
+            gameManager.value.changeLevel(selectedLevelID);
+        }
     }
 
 </script>

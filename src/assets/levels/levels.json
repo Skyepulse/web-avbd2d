@@ -1,7 +1,7 @@
 {
     "Levels": [
         {
-            "LevelID": 1,
+            "LevelID": 0,
             "LevelName": "Test",
             "Scene": {
                 "Static": [
@@ -10,7 +10,7 @@
             }
         },
         {
-            "LevelID": 2,
+            "LevelID": 1,
             "LevelName": "Pyramid",
             "Scene": {
                 "Static": [
@@ -81,6 +81,23 @@
                     { "Position": [2.5, 14], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
 
                     { "Position": [0, 17], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" }
+                ]
+            }
+        },
+        {
+            "LevelID": 2,
+            "LevelName": "Stack Ratio",
+            "Scene": {
+                "Static": [
+                    { "Position": [0, -20], "Rotation": [0], "Scale": [60, 5], "Color": "#FFFFFF" }
+                ],
+                "Dynamic": [
+                    { "Position": [0, -14], "Rotation": [0], "Scale": [1, 1], "Color": "#FFAA00" },
+                    { "Position": [0, -8], "Rotation": [0], "Scale": [4, 4], "Color": "#FFAA00" },
+                    { "Position": [0, 1], "Rotation": [0], "Scale": [8, 8], "Color": "#FFAA00" },
+                    { "Position": [0, 15], "Rotation": [0], "Scale": [12, 12], "Color": "#FFAA00"},
+                    { "Position": [0, 30], "Rotation": [0], "Scale": [16, 16], "Color": "#FFAA00" },
+                    { "Position": [0, 55], "Rotation": [0], "Scale": [20, 20], "Color": "#FFAA00" }
                 ]
             }
         }

@@ -180,7 +180,6 @@ class GameManager
                 {
                     this.solver.removeRigidBox(body);
                     this.gameRenderer.removeInstance(body.id);
-                    this.log(`Removed body ID ${body.id} for going out of bounds.`);
                     continue;
                 }
 
@@ -203,7 +202,6 @@ class GameManager
             document.hidden;
 
         if (hidden) {
-            console.log("Tab hidden — pausing main loop and GPU work.");
             this.stop();
 
             // Wait for GPU queue to finish any pending work
@@ -218,7 +216,6 @@ class GameManager
                 }
             }
         } else {
-            console.log("Tab visible again — restarting main loop.");
             // Re-acquire texture view, recreate MSAA if needed
             try {
                 this.gameRenderer.recreateContextIfNeeded();

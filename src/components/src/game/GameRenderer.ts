@@ -92,7 +92,7 @@ class GameRenderer
     // Texture to render with MSAA
     private msaaTexture: GPUTexture | null = null;
     private msaaView: GPUTextureView | null = null;
-    private sampleCount: number = 4;
+    private sampleCount: number = 4 ;
 
     public renderTimeGPU: number = 0; //ms
     public renderTimeCPU: number = 0; //ms
@@ -700,7 +700,7 @@ class GameRenderer
                     }
                 ]
             },
-            multisample: { count: 4 },
+            multisample: { count: this.sampleCount },
         });
 
         if (!this.device || !this.screenUniformBuffer) return;
@@ -750,7 +750,7 @@ class GameRenderer
                 targets: [{ format: this.presentationFormat }],
             },
             primitive: { topology: "triangle-list" },
-            multisample: { count: 4 },
+            multisample: { count: this.sampleCount },
         });
     }
 }

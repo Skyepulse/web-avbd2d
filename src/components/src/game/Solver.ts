@@ -1,3 +1,11 @@
+/**
+ * Solver.ts
+ * Responsible for the physics solver that updates rigid bodies based on forces and constraints.
+ * Based on Chris Gile's avbd-demo2d C++ implementation.
+ * 
+ * Uses for now Naive O(n^2) collision detection for simplicity, might modify later.
+ */
+
 import * as glm from 'gl-matrix';
 import type RigidBox from "./RigidBox";
 import Force from "./Force";

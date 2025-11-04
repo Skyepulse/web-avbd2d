@@ -6,6 +6,7 @@
  * One for the normal force and one for the friction (tangential) force.
  *
  * Based on Chris Gile's avbd-demo2d C++ implementation, collisions copied and modified from box2D-lite: https://github.com/erincatto/box2d-lite.
+ * Basically SAT-based box-box collision with clipping to find contact points.
  */
 
 // Box vertex and edge numbering:

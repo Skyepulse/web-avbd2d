@@ -2,7 +2,7 @@
  * GameRenderer.ts
  *
  * Responsible for rendering the main game view.
- *
+ * Renders for now box-shaped rigid bodies and contact points.
  */
 
 //================================//

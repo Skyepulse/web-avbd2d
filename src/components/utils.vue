@@ -7,6 +7,8 @@
         >
             Restart Game
         </button>
+        <div class="font-bold text-xs">* Right Click on the canvas to add a rigid box there.</div>
+        <div class="font-bold text-xs">* Drag and drop soon!</div>
         <div class="w-90% h-0.5 bg-amber-50 mt-2"></div>
         <label class="font-bold text-lg">
             Solver Values:

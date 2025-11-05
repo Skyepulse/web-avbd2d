@@ -42,13 +42,11 @@ class Solver
     private perfStepAcc: number = 0; // ms accumulator
 
     private gameManager: GameManager;
-    private creationTime: number;
 
     // ================================== //
     constructor(gameManager: GameManager)
     {
         this.gameManager = gameManager;
-        this.creationTime = performance.now();
     }
 
     //============= PUBLIC ===================//

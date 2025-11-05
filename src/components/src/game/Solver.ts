@@ -11,6 +11,7 @@ import type RigidBox from "./RigidBox";
 import Force from "./Force";
 import Manifold, { type ContactRender } from './Manifold';
 import { outerMult, solveLDLT } from '@src/helpers/MathUtils';
+import type GameManager from './GameManager';
 
 const PENALTY_MIN = 1;
 const PENALTY_MAX = 1000000000;
@@ -39,6 +40,17 @@ class Solver
     private perfIntervalStart: number = performance.now();
     private perfStepCount: number = 0;
     private perfStepAcc: number = 0; // ms accumulator
+
+    private dragConstraintSpringK: number = 5000.0;
+    private dragConstraintSpringDamping: number = 120.0;
+
+    private gameManager: GameManager;
+
+    // ================================== //
+    constructor(gameManager: GameManager)
+    {
+        this.gameManager = gameManager;
+    }
 
     //============= PUBLIC ===================//
     public Clear(): void {
@@ -228,7 +240,31 @@ class Solver
             body.setPosition(glm.vec3.add(glm.vec3.create(), body.getPosition(), glm.vec3.add(glm.vec3.create(), term2, term3)));
         }
 
-         // Main iteration loop
+        // Mouse drag and drop spring constraint
+        if (this.gameManager.dragging && this.gameManager.draggedRigidBox)
+        {
+            const box = this.gameManager.draggedRigidBox;
+            const pos2 = box.getPos2();
+            const vel2 = glm.vec2.fromValues(box.getVelocity()[0], box.getVelocity()[1]);
+            const target = this.gameManager.getDragTarget();
+
+            const diff = glm.vec2.sub(glm.vec2.create(), target, pos2);
+            console.log("Drag diff:", glm.vec2.length(diff));
+
+            // F = k * diff - damping * vel
+            const spring = glm.vec2.scale(glm.vec2.create(), diff, this.dragConstraintSpringK);
+            const damp = glm.vec2.scale(glm.vec2.create(), vel2, this.dragConstraintSpringDamping);
+            const force = glm.vec2.sub(glm.vec2.create(), spring, damp);
+
+            // Apply impulse Δv = F * dt / m
+            if (box.getMass() > 0) {
+                const accel = glm.vec2.scale(glm.vec2.create(), force, this.dt / box.getMass());
+                glm.vec2.scale(accel, accel, 0.1);
+                box.addedDragVelocity = glm.vec3.fromValues(accel[0], accel[1], 0);
+            }
+        }
+
+        // Main iteration loop
         const iterations = this.iterations + (this.postStabilization ? 1 : 0);
 
         for (let iter = 0; iter < iterations; ++iter)
@@ -324,6 +360,11 @@ class Solver
                     if (body.getMass() > 0)
                     {
                         const newVelocity: glm.vec3 = glm.vec3.sub(glm.vec3.create(), body.getPosition(), body.lastPosition);
+                        if (body.isDragged)
+                        {
+                            glm.vec3.add(newVelocity, newVelocity, body.addedDragVelocity);
+                            glm.vec3.set(body.addedDragVelocity, 0, 0, 0);
+                        }
                         glm.vec3.scale(newVelocity, newVelocity, 1 / this.dt);
                         body.setVelocity(newVelocity);
                     }

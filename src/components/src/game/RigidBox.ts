@@ -36,6 +36,9 @@ class RigidBox
 
     public forces: Force[] = [];
 
+    public isDragged: boolean = false;
+    public addedDragVelocity: glm.vec3 = glm.vec3.fromValues(0, 0, 0);
+
     //=============== PUBLIC =================//
     constructor(scale: glm.vec2, color: Uint8Array, density: number, friction: number, position: glm.vec3, velocity: glm.vec3)
     {

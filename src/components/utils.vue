@@ -1,5 +1,5 @@
 <template>
-    <div id="vertical-flex-box" class="flex flex-col space-y-2 mb-2 w-[300px]">
+    <div id="vertical-flex-box" class="flex flex-col space-y-2 w-[300px] h-[400px] overflow-auto">
         <button
             id="restart-button"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
@@ -7,9 +7,43 @@
         >
             Restart Game
         </button>
-        <div class="font-bold text-xs">* Right Click on the canvas to add a rigid box there.</div>
-        <div class="font-bold text-xs">* Drag and drop soon!</div>
-        <div class="w-90% h-0.5 bg-amber-50 mt-2"></div>
+        <div class="font-bold text-xs">* Left Click on the canvas to add a rigid box there.</div>
+        <div class="border-t border-amber-50 mt-2"></div>
+        <Label class="font-bold text-lg">
+            Box Spawn Choice:
+            <div class="flex flex-col space-y-1 text-xs" ref="boxSpawnSelect">
+                <label class="inline-flex items-center space-x-2">
+                    <input type="radio" name="boxSpawn" value="0" @change="changeSpawnChoice" />
+                    <span>Random</span>
+                </label>
+                <label class="inline-flex items-center space-x-2">
+                    <input type="radio" name="boxSpawn" value="1" @change="changeSpawnChoice" />
+                    <span>Small</span>
+                </label>
+                <label class="inline-flex items-center space-x-2">
+                    <input type="radio" name="boxSpawn" value="2" @change="changeSpawnChoice" checked />
+                    <span>Medium</span>
+                </label>
+                <label class="inline-flex items-center space-x-2">
+                    <input type="radio" name="boxSpawn" value="3" @change="changeSpawnChoice" />
+                    <span>Large</span>
+                </label>
+                <label class="inline-flex items-center space-x-2">
+                    <input type="radio" name="boxSpawn" value="4" @change="changeSpawnChoice" />
+                    <span>Drag And Drop</span>
+                </label>
+            </div>
+        </Label>
+        <div class="border-t border-amber-50 mt-2"></div>
+        <label class="font-bold text-lg">
+            Select Level:
+        </label>
+        <select id="level-select" class="border border-gray-300 rounded p-1" @change="changeLevel">
+            <option v-for="level in parsedLevels" :key="level.id" :value="level.id" class="bg-black">
+                {{ level.title }}
+            </option>
+        </select>
+        <div class="border-t border-amber-50 mt-2"></div>
         <label class="font-bold text-lg">
             Solver Values:
         </label>
@@ -100,15 +134,6 @@
             />
             <label id="gammaValue" ref="gammaLabel">0.99</label>
         </div>
-        <div class="w-90% h-0.5 bg-amber-50 mt-2"></div>
-        <label class="font-bold text-lg">
-            Select Level:
-        </label>
-        <select id="level-select" class="border border-gray-300 rounded p-1" @change="changeLevel">
-            <option v-for="level in parsedLevels" :key="level.id" :value="level.id" class="bg-black">
-                {{ level.title }}
-            </option>
-        </select>
     </div>
 </template>
 
@@ -144,6 +169,8 @@
     const gammaInput = ref<HTMLInputElement | null>(null);
 
     const iterationsInput = ref<HTMLInputElement | null>(null);
+
+    const boxSpawnSelect = ref<HTMLSelectElement | null>(null);
 
     // ================================== //
     onMounted(() => {
@@ -304,6 +331,16 @@
 
         if (gameManager.value) {
             gameManager.value.changeLevel(selectedLevelID);
+        }
+    }
+
+    // ================================== //
+    function changeSpawnChoice(event: Event)
+    {
+        const selectedValue = parseInt((event.target as HTMLInputElement).value);
+
+        if (gameManager.value) {
+            gameManager.value.modifyBoxSpawnState(selectedValue);
         }
     }
 

@@ -41,9 +41,6 @@ class Solver
     private perfStepCount: number = 0;
     private perfStepAcc: number = 0; // ms accumulator
 
-    private dragConstraintSpringK: number = 5000.0;
-    private dragConstraintSpringDamping: number = 120.0;
-
     private gameManager: GameManager;
 
     // ================================== //
@@ -174,8 +171,11 @@ class Solver
                 this.forces.splice(i, 1);
                 --i;
 
-                const indexA = force.bodyA.forces.indexOf(force);
-                if (indexA !== -1) force.bodyA.forces.splice(indexA, 1);
+                if (force.bodyA)
+                {
+                    const indexA = force.bodyA.forces.indexOf(force);
+                    if (indexA !== -1) force.bodyA.forces.splice(indexA, 1);
+                }
 
                 const indexB = force.bodyB.forces.indexOf(force);
                 if (indexB !== -1) force.bodyB.forces.splice(indexB, 1);
@@ -238,30 +238,6 @@ class Solver
             const term2: glm.vec3 = glm.vec3.scale(glm.vec3.create(), body.getVelocity(), this.dt);
             const term3: glm.vec3 = glm.vec3.scale(glm.vec3.create(), glm.vec3.fromValues(this.gravity[0], this.gravity[1], 0), accelWeight * this.dt * this.dt);
             body.setPosition(glm.vec3.add(glm.vec3.create(), body.getPosition(), glm.vec3.add(glm.vec3.create(), term2, term3)));
-        }
-
-        // Mouse drag and drop spring constraint
-        if (this.gameManager.dragging && this.gameManager.draggedRigidBox)
-        {
-            const box = this.gameManager.draggedRigidBox;
-            const pos2 = box.getPos2();
-            const vel2 = glm.vec2.fromValues(box.getVelocity()[0], box.getVelocity()[1]);
-            const target = this.gameManager.getDragTarget();
-
-            const diff = glm.vec2.sub(glm.vec2.create(), target, pos2);
-            console.log("Drag diff:", glm.vec2.length(diff));
-
-            // F = k * diff - damping * vel
-            const spring = glm.vec2.scale(glm.vec2.create(), diff, this.dragConstraintSpringK);
-            const damp = glm.vec2.scale(glm.vec2.create(), vel2, this.dragConstraintSpringDamping);
-            const force = glm.vec2.sub(glm.vec2.create(), spring, damp);
-
-            // Apply impulse Δv = F * dt / m
-            if (box.getMass() > 0) {
-                const accel = glm.vec2.scale(glm.vec2.create(), force, this.dt / box.getMass());
-                glm.vec2.scale(accel, accel, 0.1);
-                box.addedDragVelocity = glm.vec3.fromValues(accel[0], accel[1], 0);
-            }
         }
 
         // Main iteration loop
@@ -414,6 +390,38 @@ class Solver
             this.bodies.splice(index, 1);
         
         box.destroy();
+    }
+
+    // ================================== //
+    public addForce(force: Force): void
+    {
+        if (this.forces.indexOf(force) === -1)
+            this.forces.push(force);
+
+        if (force.bodyA)
+        {
+            if (force.bodyA.forces.indexOf(force) === -1)
+                force.bodyA.forces.push(force);
+        }
+        if (force.bodyB && force.bodyB.forces.indexOf(force) === -1)
+            force.bodyB.forces.push(force);
+    }
+
+    // ================================== //
+    public removeForce(force: Force): void
+    {
+        if (force.bodyA)
+        {
+            const indexA = force.bodyA.forces.indexOf(force);
+            if (indexA !== -1) force.bodyA.forces.splice(indexA, 1);
+        }
+        const indexB = force.bodyB.forces.indexOf(force);
+        if (indexB !== -1) force.bodyB.forces.splice(indexB, 1);
+
+        const index = this.forces.indexOf(force);
+        if (index !== -1)
+            this.forces.splice(index, 1);
+        force.destroy();
     }
 }
 

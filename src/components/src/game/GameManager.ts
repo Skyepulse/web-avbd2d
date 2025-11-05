@@ -12,6 +12,7 @@ import RigidBox from "./RigidBox";
 import Solver from "./Solver";
 import { rand, randomPosInRectRot, randomColorUint8 } from "@src/helpers/MathUtils";
 import { useLevels } from '@src/helpers/Levels';
+import Joint from './Joint';
 
 // ================================== //
 export interface performanceInformation
@@ -66,6 +67,8 @@ class GameManager
     public getDragTarget(): glm.vec2 { return this.dragTarget; }
     private dragOffset: glm.vec2 = glm.vec2.create();
     public getDragOffset(): glm.vec2 { return this.dragOffset; }
+    private dragForce: Joint | null = null;
+    public getDragForce(): Joint | null { return this.dragForce; }
 
     //=============== PUBLIC =================//
     constructor(canvas: HTMLCanvasElement)
@@ -503,16 +506,14 @@ class GameManager
 
                 const pos = box.getPos2();
                 const half = glm.vec2.scale(glm.vec2.create(), box.getScale(), 0.5);
+                const rot = box.getRotationMatrix();
+                const dx = mouse[0] - pos[0];
+                const dy = mouse[1] - pos[1];
+                const localX = rot[0] * dx + rot[1] * dy;
+                const localY = rot[2] * dx + rot[3] * dy;
 
-                if (
-                    mouse[0] >= pos[0] - half[0] &&
-                    mouse[0] <= pos[0] + half[0] &&
-                    mouse[1] >= pos[1] - half[1] &&
-                    mouse[1] <= pos[1] + half[1]
-                ) 
-                {
-                    const dx = mouse[0] - pos[0];
-                    const dy = mouse[1] - pos[1];
+                if (localX >= -half[0] && localX <= half[0] &&
+                    localY >= -half[1] && localY <= half[1]) {
                     const dist = dx * dx + dy * dy;
                     if (dist < minDist) {
                         minDist = dist;
@@ -528,10 +529,30 @@ class GameManager
 
                 selectedBox.isDragged = true;
                 const pos = selectedBox.getPos2();
+
+                const rotMatrix = selectedBox.getRotationMatrix();
+                const rotInv = glm.mat2.transpose(glm.mat2.create(), rotMatrix); // R(-θ)
+
+                const localRbPos = glm.vec2.create();
+                const worldToLocal = glm.vec2.sub(glm.vec2.create(), mouse, pos);
+                glm.vec2.transformMat2(localRbPos, worldToLocal, rotInv);
                 
                 glm.vec2.set(this.dragOffset, mouse[0] - pos[0], mouse[1] - pos[1]);
                 glm.vec2.copy(this.dragTarget, mouse);
-            }
+
+                this.dragForce = new Joint(
+                    null,
+                    selectedBox,
+                    mouse,
+                    localRbPos,
+                    glm.vec3.fromValues(10000.0, 10000.0, 0.0),
+                );
+
+                this.solver.addForce(this.dragForce);
+
+                console.log(`Started dragging box ID ${selectedBox.id}`);
+            } else
+                console.log("No box selected for dragging.");
         };
 
         // ON MOUSE MOVE
@@ -541,6 +562,11 @@ class GameManager
 
             const mouse = toWorld(event);
             glm.vec2.copy(this.dragTarget, mouse);
+
+            if (this.dragForce)
+            {
+                glm.vec2.set(this.dragForce.rA, mouse[0], mouse[1]);
+            }
         }
 
         // ON MOUSE UP
@@ -551,6 +577,11 @@ class GameManager
             if (this.draggedBox)
             {
                 this.draggedBox.isDragged = false;
+                if (this.dragForce)
+                {
+                    this.solver.removeForce(this.dragForce);
+                    this.dragForce = null;
+                }
             }
 
             this.isDragging = false;

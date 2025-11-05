@@ -10,7 +10,7 @@ import type RigidBox from "./RigidBox";
 import type { ContactRender } from './Manifold';
 class Force
 {
-    public bodyA: RigidBox;
+    public bodyA: RigidBox | null;
     public bodyB: RigidBox;
 
     public static readonly MAX_ROWS: number = 4;
@@ -26,7 +26,7 @@ class Force
     public lambda: number[] = [];
 
     //=============== PUBLIC =================//
-    constructor(bodyA: RigidBox, bodyB: RigidBox)
+    constructor(bodyA: RigidBox | null, bodyB: RigidBox)
     {
         this.bodyA = bodyA;
         this.bodyB = bodyB;

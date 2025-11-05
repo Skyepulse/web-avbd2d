@@ -266,6 +266,9 @@ class Manifold extends Force
     //=============== PUBLIC =================//
     constructor(bodyA: RigidBox, bodyB: RigidBox)
     {
+        if (!bodyA)
+            throw new Error("Manifold requires both bodyA and bodyB to be defined.");
+
         super(bodyA, bodyB);
 
         for (let i = 0; i < Force.MAX_ROWS; ++i)
@@ -281,6 +284,8 @@ class Manifold extends Force
     //================================//
     public initialize()
     {
+        if (!this.bodyA || !this.bodyB) return false;
+
         this.friction = Math.sqrt(this.bodyA.getFriction() * this.bodyB.getFriction());
 
         this.oldContacts = this.contacts.slice();
@@ -358,6 +363,8 @@ class Manifold extends Force
     //================================//
     public computeConstraints(alpha: number)
     {
+        if (!this.bodyA || !this.bodyB) return;
+
         for(let i = 0; i < this.contacts.length; ++i)
         {
             // Taylor series approximation in equation 18
@@ -614,6 +621,8 @@ class Manifold extends Force
     //================================//
     public getContactRenders(): ContactRender[] 
     {
+        if (!this.bodyA || !this.bodyB) return [];
+        
         const renders: ContactRender[] = [];
 
         const RA = rotationMatrix(this.bodyA.getPosition()[2]);

@@ -110,3 +110,9 @@ export function cross2(a: glm.vec2, b: glm.vec2): number
 {
   return a[0] * b[1] - a[1] * b[0];
 }
+
+// ================================== //
+export function degreesToRadians(degrees: number): number
+{
+    return degrees * (Math.PI / 180);
+}

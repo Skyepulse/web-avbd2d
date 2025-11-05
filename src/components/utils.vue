@@ -138,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-    import { defineProps, ref, watch, onMounted } from 'vue';
+    import { ref, watch, onMounted } from 'vue';
     import GameManager from './src/game/GameManager';
     import { useLevels } from '@src/helpers/Levels';
 

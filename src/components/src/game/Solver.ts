@@ -42,11 +42,13 @@ class Solver
     private perfStepAcc: number = 0; // ms accumulator
 
     private gameManager: GameManager;
+    private creationTime: number;
 
     // ================================== //
     constructor(gameManager: GameManager)
     {
         this.gameManager = gameManager;
+        this.creationTime = performance.now();
     }
 
     //============= PUBLIC ===================//
@@ -332,9 +334,9 @@ class Solver
             {
                 for (const body of this.bodies)
                 {
-                    body.prevVelocity = body.getVelocity();
                     if (body.getMass() > 0)
                     {
+                        body.prevVelocity = body.getVelocity();
                         const newVelocity: glm.vec3 = glm.vec3.sub(glm.vec3.create(), body.getPosition(), body.lastPosition);
                         if (body.isDragged)
                         {

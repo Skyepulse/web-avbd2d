@@ -11,7 +11,7 @@ import GameRenderer from "./GameRenderer";
 import RigidBox from "./RigidBox";
 import Solver from "./Solver";
 import { rand, randomPosInRectRot, randomColorUint8 } from "@src/helpers/MathUtils";
-import { useLevels } from '@src/helpers/Levels';
+import { useLevels, type GObject } from '@src/helpers/Levels';
 import Joint from './Joint';
 
 // ================================== //
@@ -85,8 +85,8 @@ class GameManager
     //================================//
     public async initialize()
     {
-        await this.LoadLevel(2);
-        this.CurrentLevelID = 2;
+        await this.LoadLevel(0);
+        this.CurrentLevelID = 0;
     }
 
     //================================//
@@ -191,10 +191,12 @@ class GameManager
         scale: glm.vec2 = glm.vec2.fromValues(rand(2, 10), rand(2, 10)), 
         velocity: glm.vec3 = glm.vec3.fromValues(0, 0, 0),
         color: Uint8Array = randomColorUint8(),
-        isStatic: boolean = false
+        isStatic: boolean = false,
+        friction: number = 1.0,
     ): void
     {
-        const box = new RigidBox(scale, color, isStatic ? 0.0: 1.0, 1.0, pos, velocity);
+        const box = new RigidBox(scale, color, isStatic ? 0.0: 1.0, friction, pos, velocity);
+
         box.id = this.gameRenderer.addInstanceBox(box);
         if (box.id !== -1) {
             this.solver.addRigidBox(box);
@@ -309,8 +311,8 @@ class GameManager
 
         this.initializeWindowEvents();
 
-        // Load Static Objects (mass = 0)
-        level.Scene.Static?.forEach(obj => {
+        const loadObject = (obj: GObject, isStatic: boolean) =>
+        {
             const pos = glm.vec3.fromValues(GameRenderer.xWorldSize / 2 + obj.Position[0], GameRenderer.yWorldSize / 2 + obj.Position[1], obj.Rotation);
             const scale = glm.vec2.fromValues(obj.Scale[0], obj.Scale[1]);
             const colorArr = new Uint8Array(4);
@@ -319,20 +321,36 @@ class GameManager
             colorArr[1] = parseInt(color.slice(3, 5), 16);
             colorArr[2] = parseInt(color.slice(5, 7), 16);
             colorArr[3] = 255;
-            this.addRigidBox(pos, scale, glm.vec3.fromValues(0, 0, 0), colorArr, true);
-        });
+            const friction = obj.Friction;
+            const initialVelocity = obj.InitVelocity;
+            this.addRigidBox(pos, scale, initialVelocity, colorArr, isStatic, friction);
+        }
 
+        // Load Static Objects (mass = 0)
+        level.Scene.Static?.forEach(obj => loadObject(obj, true));
         // Load Dynamic Objects (mass > 0)
-        level.Scene.Dynamic?.forEach(obj => {
-            const pos = glm.vec3.fromValues(GameRenderer.xWorldSize / 2 + obj.Position[0], GameRenderer.yWorldSize / 2 + obj.Position[1], obj.Rotation);
-            const scale = glm.vec2.fromValues(obj.Scale[0], obj.Scale[1]);
-            const colorArr = new Uint8Array(4);
-            const color = obj.Color;
-            colorArr[0] = parseInt(color.slice(1, 3), 16);
-            colorArr[1] = parseInt(color.slice(3, 5), 16);
-            colorArr[2] = parseInt(color.slice(5, 7), 16);
-            colorArr[3] = 255;
-            this.addRigidBox(pos, scale, glm.vec3.fromValues(0, 0, 0), colorArr, false);
+        level.Scene.Dynamic?.forEach(obj => loadObject(obj, false));
+
+        level.Scene.JointForces?.forEach(jf => 
+        {
+            const bodyA = jf.bodyAIndex !== null ? this.solver.bodies[jf.bodyAIndex] : null;
+            const bodyB = this.solver.bodies[jf.bodyBIndex];
+
+            if (!bodyB) {
+                this.logWarn(`Joint force bodyBIndex ${jf.bodyBIndex} is invalid.`);
+                return;
+            }
+
+            const joint = new Joint(
+                bodyA,
+                bodyB,
+                jf.rA_offset_center,
+                jf.rB_offset_center,
+                jf.stiffness,
+                jf.fracture
+            );
+
+            this.solver.addForce(joint);
         });
 
         this.startMainLoop();

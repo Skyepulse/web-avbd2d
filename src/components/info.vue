@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-    import { defineProps, ref, watch, onMounted, onUnmounted } from 'vue';    
+    import { ref, watch, onMounted, onUnmounted } from 'vue';    
     import GameManager from './src/game/GameManager';
     import type { performanceInformation } from './src/game/GameManager';
 

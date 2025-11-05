@@ -89,7 +89,7 @@ class RigidBox
     }
 
     //================================//
-    public setPosition(position: glm.vec3): void { if (!this.staticBody) this.position = position; }
+    public setPosition(position: glm.vec3): void { this.position = position; }
 
     //================================//
     public setColor(color: Uint8Array): void { this.color = color; }

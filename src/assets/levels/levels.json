@@ -5,7 +5,7 @@
             "LevelName": "Test",
             "Scene": {
                 "Static": [
-                    { "Position": [0, -20], "Rotation": [0], "Scale": [60, 5], "Color": "#FFFFFF" }
+                    { "Position": [0, -20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [60, 5], "Friction": 1.0, "Color": "#FFFFFF" }
                 ]
             }
         },
@@ -14,73 +14,73 @@
             "LevelName": "Pyramid",
             "Scene": {
                 "Static": [
-                    { "Position": [0, -20], "Rotation": [0], "Scale": [60, 5], "Color": "#FFFFFF" }
+                    { "Position": [0, -20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [60, 5], "Friction": 1.0, "Color": "#FFFFFF" }
                 ],
                 "Dynamic": [
-                    { "Position": [-22.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-17.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-12.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-7.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-2.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [2.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [7.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [12.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [17.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [22.5, -10], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-22.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-17.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-12.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-7.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-2.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [2.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [7.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [12.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [17.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [22.5, -10], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-20, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-15, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-10, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-5, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [0, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [5, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [10, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [15, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [20, -7], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-20, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-15, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-10, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-5, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [5, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [10, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [15, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [20, -7], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-17.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-12.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-7.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-2.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [2.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [7.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [12.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [17.5, -4], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-17.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-12.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-7.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-2.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [2.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [7.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [12.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [17.5, -4], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-15, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-10, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-5, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [0, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [5, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [10, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [15, -1], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-15, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-10, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-5, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [5, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [10, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [15, -1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-12.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-7.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-2.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [2.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [7.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [12.5, 2], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-12.5, 2], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-7.5, 2], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-2.5, 2], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [2.5, 2], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [7.5, 2], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [12.5, 2], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-10, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-5, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [0, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [5, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [10, 5], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-10, 5], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-5, 5], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, 5], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [5, 5], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [10, 5], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-7.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [-2.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [2.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [7.5, 8], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-7.5, 8], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [-2.5, 8], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [2.5, 8], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [7.5, 8], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-5, 11], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [0, 11], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [5, 11], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-5, 11], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, 11], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [5, 11], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [-2.5, 14], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
-                    { "Position": [2.5, 14], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" },
+                    { "Position": [-2.5, 14], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [2.5, 14], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" },
 
-                    { "Position": [0, 17], "Rotation": [0], "Scale": [5, 2], "Color": "#FFAA00" }
+                    { "Position": [0, 17], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [5, 2], "Friction": 1.0, "Color": "#FFAA00" }
                 ]
             }
         },
@@ -89,15 +89,99 @@
             "LevelName": "Stack Ratio",
             "Scene": {
                 "Static": [
-                    { "Position": [0, -20], "Rotation": [0], "Scale": [60, 5], "Color": "#FFFFFF" }
+                    { "Position": [0, -20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [60, 5], "Friction": 1.0, "Color": "#FFFFFF" }
                 ],
                 "Dynamic": [
-                    { "Position": [0, -14], "Rotation": [0], "Scale": [1, 1], "Color": "#FFAA00" },
-                    { "Position": [0, -8], "Rotation": [0], "Scale": [4, 4], "Color": "#FFAA00" },
-                    { "Position": [0, 1], "Rotation": [0], "Scale": [8, 8], "Color": "#FFAA00" },
-                    { "Position": [0, 15], "Rotation": [0], "Scale": [12, 12], "Color": "#FFAA00"},
-                    { "Position": [0, 30], "Rotation": [0], "Scale": [16, 16], "Color": "#FFAA00" },
-                    { "Position": [0, 55], "Rotation": [0], "Scale": [20, 20], "Color": "#FFAA00" }
+                    { "Position": [0, -14], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [1, 1], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, -8], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [4, 4], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, 1], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [8, 8], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, 15], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [12, 12], "Friction": 1.0, "Color": "#FFAA00"},
+                    { "Position": [0, 30], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [16, 16], "Friction": 1.0, "Color": "#FFAA00" },
+                    { "Position": [0, 55], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [20, 20], "Friction": 1.0, "Color": "#FFAA00" }
+                ]
+            }
+        },
+        {
+            "LevelID": 3,
+            "LevelName": "FrictionDisplay",
+            "Scene": {
+                "Static": [
+                    { "Position": [0, -20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [100, 5], "Friction": 1.0, "Color": "#FFFFFF" }
+                ],
+                "Dynamic": [
+                    { "Position": [-50, -10], "Rotation": [0], "InitVelocity": [10, 0, 0], "Scale": [3, 3], "Friction": 1.0, "Color": "#FF0000" },
+                    { "Position": [-35, -10], "Rotation": [0], "InitVelocity": [10, 0, 0], "Scale": [3, 3], "Friction": 0.2, "Color": "#FF7F00" },
+                    { "Position": [-20, -10], "Rotation": [0], "InitVelocity": [10, 0, 0], "Scale": [3, 3], "Friction": 0.15, "Color": "#FFFF00" },
+                    { "Position": [-5, -10], "Rotation": [0], "InitVelocity": [10, 0, 0], "Scale": [3, 3], "Friction": 0.1, "Color": "#00FF00" },
+                    { "Position": [10, -10], "Rotation": [0], "InitVelocity": [10, 0, 0], "Scale": [3, 3], "Friction": 0.05, "Color": "#0000FF" },
+                    { "Position": [25, -10], "Rotation": [0], "InitVelocity": [10, 0, 0], "Scale": [3, 3], "Friction": 0.0, "Color": "#8B00FF" }
+                ]
+            }
+        },
+        {
+            "LevelID": 4,
+            "LevelName": "FrictionSlope",
+            "Scene": {
+                "Static": [
+                    { "Position": [-20, 0], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [200, 5], "Friction": 1.0, "Color": "#FFFFFF" }
+                ],
+                "Dynamic": [
+                    { "Position": [-50, 30], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [3, 3], "Friction": 1.0, "Color": "#FF0000" },
+                    { "Position": [-35, 25], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [3, 3], "Friction": 0.2, "Color": "#FF7F00" },
+                    { "Position": [-20, 20], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [3, 3], "Friction": 0.15, "Color": "#FFFF00" },
+                    { "Position": [-5, 15], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [3, 3], "Friction": 0.1, "Color": "#00FF00" },
+                    { "Position": [10, 10], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [3, 3], "Friction": 0.05, "Color": "#0000FF" },
+                    { "Position": [25, 5], "Rotation": [-20], "InitVelocity": [0, 0, 0], "Scale": [3, 3], "Friction": 0.0, "Color": "#8B00FF" }
+                ]
+            }
+        },
+        {
+            "LevelID": 5,
+            "LevelName": "Joints Test",
+            "Scene": {
+                "Static": [
+                    { "Position": [0, 0], "Rotation": [0], "InitVelocity": [0, 0, 2.5], "Scale": [30, 5], "Friction": 1.0, "Color": "#FFFFFF" },
+                    { "Position": [0, 0], "Rotation": [90], "InitVelocity": [0, 0, 2.5], "Scale": [30, 5], "Friction": 1.0, "Color": "#FFFFFF" }
+                ],
+                "Dynamic": [
+                    { "Position": [20, 0], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [10, 10], "Friction": 1.0, "Color": "#FF7F00" },
+                    { "Position": [-20, 0], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [10, 10], "Friction": 1.0, "Color": "#FFFF00" },
+                    { "Position": [0, 20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [10, 10], "Friction": 1.0, "Color": "#00FF00" },
+                    { "Position": [0, -20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [10, 10], "Friction": 1.0, "Color": "#8B00FF" }
+                ],
+                "JointForces": [
+                    {
+                        "bodyAIndex": 0,
+                        "bodyBIndex": 2,
+                        "rA_offset_center": [15, 0],
+                        "rB_offset_center": [0, 0],
+                        "stiffness": [100000, 100000, 0],
+                        "fracture": 100000000
+                    },
+                    {
+                        "bodyAIndex": 0,
+                        "bodyBIndex": 3,
+                        "rA_offset_center": [-15, 0],
+                        "rB_offset_center": [0, 0],
+                        "stiffness": [10000, 10000, 0],
+                        "fracture": 100000000
+                    },
+                    {
+                        "bodyAIndex": 1,
+                        "bodyBIndex": 4,
+                        "rA_offset_center": [15, 0],
+                        "rB_offset_center": [0, 0],
+                        "stiffness": [50000, 50000, 0],
+                        "fracture": 100000000
+                    },
+                    {
+                        "bodyAIndex": 1,
+                        "bodyBIndex": 5,
+                        "rA_offset_center": [-15, 0],
+                        "rB_offset_center": [0, 0],
+                        "stiffness": [5000, 5000, 0],
+                        "fracture": 100000000
+                    }
                 ]
             }
         }

@@ -132,7 +132,7 @@ class Solver
     {
         const stepStart = performance.now();
         if (Math.abs(dt - this.dt) > 0.01)
-            console.warn(`Warning: Physics timestep changed from ${this.dt} to ${dt}. This may cause instability.`);
+            this.gameManager.logWarn(`Warning: Physics timestep changed from ${this.dt} to ${dt}. This may cause instability.`);
         
         this.contactsToRender = [];
         // Detection: NAIVE O(n^2) FOR NOW

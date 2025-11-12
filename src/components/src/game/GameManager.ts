@@ -42,7 +42,6 @@ class GameManager
     private canvas: HTMLCanvasElement | null = null;
 
     private gameRenderer: GameRenderer;
-    private currentRatio: number = 1.0;
     private solver: Solver;
 
     private lastFrameTime: number = 0;
@@ -532,7 +531,6 @@ class GameManager
             let newZoom = this.gameRenderer.zoom * (1 + zoomAmount);
             newZoom = Math.min(Math.max(newZoom, 0.1), 5.0);
 
-            const oldZoom = this.gameRenderer.zoom;
             this.gameRenderer.zoom = newZoom;
 
             const post = this.screenToWorld(event.clientX, event.clientY);

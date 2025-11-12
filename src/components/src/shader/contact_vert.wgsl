@@ -1,11 +1,14 @@
 // ============================== //
-struct Screen {
-    worldSize : vec2<f32>,
-    pad : vec2<f32>,
+struct ScreenInfo {
+    halfWorldSize : vec2f,
+    aspectRatio : f32,
+    zoom : f32,
+    cameraOffset : vec2f,
+    _pad : vec2f,
 };
 
 // ============================== //
-@group(0) @binding(0) var<uniform> screen : Screen;
+@group(0) @binding(0) var<uniform> uScreen : ScreenInfo;
 
 // ============================== //
 struct VSOut {
@@ -16,21 +19,20 @@ struct VSOut {
 // ============================== //
 @vertex
 fn vs(
-    @location(0) position : vec2<f32>,     // Circle vertex local coordinates
-    @location(1) instancePos : vec2<f32>   // Contact center (world-space)
+    @location(0) position : vec2<f32>,
+    @location(1) instancePos : vec2<f32>
 ) -> VSOut {
     var out : VSOut;
 
-    let radius = 0.1;
-    let posFixed = vec2<f32>(position.x, position.y);
-    let world = instancePos + posFixed * radius;
-    let ndc = vec2<f32>(
-        (world.x / screen.worldSize.x) * 2.0 - 1.0,
-        (world.y / screen.worldSize.y) * 2.0 - 1.0
-    );
+    let radius = 0.25;
+    var world = instancePos + position * radius;
+    world = (world - uScreen.cameraOffset) * uScreen.zoom;
 
-    out.position = vec4<f32>(ndc.x, ndc.y, 0.0, 1.0);
+    let worldAspect = uScreen.halfWorldSize.x / uScreen.halfWorldSize.y;
+    let ndcX = (world.x / uScreen.halfWorldSize.x) * (worldAspect / uScreen.aspectRatio);
+    let ndcY =  world.y / uScreen.halfWorldSize.y;
 
+    out.position = vec4<f32>(ndcX, ndcY, 0.0, 1.0);
     out.color = vec3<f32>(1.0, 0.0, 0.0);
     return out;
 }

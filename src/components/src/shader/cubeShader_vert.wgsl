@@ -17,36 +17,39 @@ struct OurVertexShaderOutput {
 
 // ============================== //
 struct ScreenInfo {
-    worldSize : vec2f, // e.g. vec2f(100.0, 50.0)
+    halfWorldSize : vec2f,
+    aspectRatio : f32,
+    zoom : f32,
+    cameraOffset : vec2f,
+    _pad : vec2f,
 };
 
-@group(0) @binding(0) 
+@group(0) @binding(0)
 var<uniform> uScreen : ScreenInfo;
 
 // ============================== //
 @vertex
 fn vs(
     vert: vertexStruct,
-) -> OurVertexShaderOutput
-{
+) -> OurVertexShaderOutput {
     var out: OurVertexShaderOutput;
 
-    let rotation : f32 = vert.worldPos.z;
-    let cosR : f32 = cos(rotation);
-    let sinR : f32 = sin(rotation);
+    let rotation: f32 = vert.worldPos.z;
+    let cosR: f32 = cos(rotation);
+    let sinR: f32 = sin(rotation);
 
-    let scaledPos : vec2f = vert.position * vert.scale;
-    let rotatedX : f32 = scaledPos.x * cosR - scaledPos.y * sinR;
-    let rotatedY : f32 = scaledPos.x * sinR + scaledPos.y * cosR;
-    let worldRotated : vec2f = vert.worldPos.xy + vec2f(rotatedX, rotatedY);
+    let scaledPos: vec2f = vert.position * vert.scale;
+    let rotatedX: f32 = scaledPos.x * cosR - scaledPos.y * sinR;
+    let rotatedY: f32 = scaledPos.x * sinR + scaledPos.y * cosR;
+    let worldRotated: vec2f = vert.worldPos.xy + vec2f(rotatedX, rotatedY);
 
-    // Map world [0..worldSize] -> NDC [-1..1]
-    let ndc : vec2f = vec2f(
-        (worldRotated.x / uScreen.worldSize.x) * 2.0 - 1.0,
-        (worldRotated.y / uScreen.worldSize.y) * 2.0 - 1.0
-    );
+    let worldView: vec2f = (worldRotated - uScreen.cameraOffset) * uScreen.zoom;
 
-    out.position = vec4f(ndc, 0.0, 1.0);
+    let worldAspect = uScreen.halfWorldSize.x / uScreen.halfWorldSize.y;
+    let ndcX = (worldView.x / uScreen.halfWorldSize.x) * (worldAspect / uScreen.aspectRatio);
+    let ndcY =  worldView.y / uScreen.halfWorldSize.y;
+
+    out.position = vec4f(ndcX, ndcY, 0.0, 1.0);
     out.color = vert.color;
     out.localPos = vec2f(rotatedX, rotatedY);
     out.scale = vert.scale;

@@ -42,6 +42,7 @@ class GameManager
     private canvas: HTMLCanvasElement | null = null;
 
     private gameRenderer: GameRenderer;
+    private currentRatio: number = 1.0;
     private solver: Solver;
 
     private lastFrameTime: number = 0;
@@ -49,6 +50,8 @@ class GameManager
     private onMouseDown?: (e: MouseEvent) => void;
     private onMouseMove?: (e: MouseEvent) => void;
     private onMouseUp?: (e: MouseEvent) => void;
+
+    private onZoom?: (e: WheelEvent) => void;
 
     private windowRestart?: (e: KeyboardEvent) => void;
 
@@ -116,6 +119,11 @@ class GameManager
         if (this.windowRestart) {
             window.removeEventListener("keydown", this.windowRestart);
             this.windowRestart = undefined;
+        }
+
+        if (this.onZoom) {
+            this.canvas.removeEventListener("wheel", this.onZoom);
+            this.onZoom = undefined;
         }
 
         await this.gameRenderer.cleanup();
@@ -313,7 +321,7 @@ class GameManager
 
         const loadObject = (obj: GObject, isStatic: boolean) =>
         {
-            const pos = glm.vec3.fromValues(GameRenderer.xWorldSize / 2 + obj.Position[0], GameRenderer.yWorldSize / 2 + obj.Position[1], obj.Rotation);
+            const pos = glm.vec3.fromValues(obj.Position[0], obj.Position[1], obj.Rotation);
             const scale = glm.vec2.fromValues(obj.Scale[0], obj.Scale[1]);
             const colorArr = new Uint8Array(4);
             const color = obj.Color;
@@ -452,28 +460,25 @@ class GameManager
     private spawnBoxOnClick(event: MouseEvent): void
     {
         if (!this.canvas) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
 
-        const canvasX = (x / this.canvas.width) * GameRenderer.xWorldSize;
-        const canvasY = (1.0 - (y / this.canvas.height)) * GameRenderer.yWorldSize;
+        const worldPos = this.screenToWorld(event.clientX, event.clientY);
+        const worldX = worldPos[0];
+        const worldY = worldPos[1];
 
         const smallMult = 2;
         const mediumMult = 5;
         const largeMult = 10;
 
-        const pos = glm.vec3.fromValues(canvasX, canvasY, 0);
+        const pos = glm.vec3.fromValues(worldX, worldY, 0);
         const scale = glm.vec2.create();
 
-        // Random color
         let color = randomColorUint8();
         const baseSize = 1.0;
 
         switch (this.boxSpawnState) {
             case BoxSpawnState.Random:
                 glm.vec2.set(scale, rand(2, 10), rand(2, 10));
-                pos[2] = rand(0, Math.PI * 2)
+                pos[2] = rand(0, Math.PI * 2);
                 break;
             case BoxSpawnState.Small:
                 glm.vec2.set(scale, baseSize * smallMult, baseSize * smallMult);
@@ -489,23 +494,55 @@ class GameManager
         this.addRigidBox(pos, scale, glm.vec3.fromValues(0, 0, 0), color, false);
     }
 
+    // ================================== //
+    private screenToWorld(clientX: number, clientY: number): glm.vec2
+    {
+        const rect = this.canvas!.getBoundingClientRect();
+        const px = clientX - rect.left;
+        const py = clientY - rect.top;
+
+        const ndcX = (px / this.canvas!.width) * 2.0 - 1.0;
+        const ndcY = (1.0 - (py / this.canvas!.height)) * 2.0 - 1.0;
+
+        const aspect = this.canvas!.width / this.canvas!.height;
+        const halfW = GameRenderer.xWorldSize * 0.5;
+        const halfH = GameRenderer.yWorldSize * 0.5;
+
+        const preCamX = ndcX * halfW * (aspect * (halfH / halfW));
+        const preCamY = ndcY * halfH;
+
+        const worldX = preCamX / this.gameRenderer.zoom + this.gameRenderer.cameraOffset.x;
+        const worldY = preCamY / this.gameRenderer.zoom + this.gameRenderer.cameraOffset.y;
+
+        return glm.vec2.fromValues(worldX, worldY);
+    };
+
+
     //================================//
     private initializeWindowEvents(): void
     {
         if (!this.canvas) return;
 
-        // Helper to convert mouse events coordinates to world coordinates
-        const toWorld = (event: MouseEvent): glm.vec2 => 
-        {
-            const rect = this.canvas!.getBoundingClientRect();
-            const x = (event.clientX - rect.left) / this.canvas!.width * GameRenderer.xWorldSize;
-            const y = (1.0 - (event.clientY - rect.top) / this.canvas!.height) * GameRenderer.yWorldSize;
-            return glm.vec2.fromValues(x, y);
+        const applyZoom = (event: WheelEvent): void => {
+            event.preventDefault();
+
+            const pre = this.screenToWorld(event.clientX, event.clientY);
+
+            const zoomAmount = event.deltaY * -0.001;
+            let newZoom = this.gameRenderer.zoom * (1 + zoomAmount);
+            newZoom = Math.min(Math.max(newZoom, 0.1), 5.0);
+
+            const oldZoom = this.gameRenderer.zoom;
+            this.gameRenderer.zoom = newZoom;
+
+            const post = this.screenToWorld(event.clientX, event.clientY);
+
+            // keep the point under the cursor stable
+            this.gameRenderer.cameraOffset.x += (pre[0] - post[0]);
+            this.gameRenderer.cameraOffset.y += (pre[1] - post[1]);
         };
 
-        // ON MOUSE DOWN
-        this.onMouseDown = (event: MouseEvent) => 
-        {
+        this.onMouseDown = (event: MouseEvent) => {
             if (event.button !== 0) return;
 
             if (this.boxSpawnState !== BoxSpawnState.DragAndDrop) {
@@ -513,14 +550,12 @@ class GameManager
                 return;
             }
 
-            const mouse = toWorld(event);
+            const mouse = this.screenToWorld(event.clientX, event.clientY);
             let selectedBox: RigidBox | null = null;
             let minDist = Infinity;
 
-            // AABB picking
-            for (const box of this.solver.bodies)
-            {
-                if (box.isStatic()) continue; // We cannot drag static bodies
+            for (const box of this.solver.bodies) {
+                if (box.isStatic()) continue;
 
                 const pos = box.getPos2();
                 const half = glm.vec2.scale(glm.vec2.create(), box.getScale(), 0.5);
@@ -540,21 +575,19 @@ class GameManager
                 }
             }
 
-            if (selectedBox)
-            {
+            if (selectedBox) {
                 this.isDragging = true;
                 this.draggedBox = selectedBox;
-
                 selectedBox.isDragged = true;
-                const pos = selectedBox.getPos2();
 
+                const pos = selectedBox.getPos2();
                 const rotMatrix = selectedBox.getRotationMatrix();
-                const rotInv = glm.mat2.transpose(glm.mat2.create(), rotMatrix); // R(-θ)
+                const rotInv = glm.mat2.transpose(glm.mat2.create(), rotMatrix);
 
                 const localRbPos = glm.vec2.create();
                 const worldToLocal = glm.vec2.sub(glm.vec2.create(), mouse, pos);
                 glm.vec2.transformMat2(localRbPos, worldToLocal, rotInv);
-                
+
                 glm.vec2.set(this.dragOffset, mouse[0] - pos[0], mouse[1] - pos[1]);
                 glm.vec2.copy(this.dragTarget, mouse);
 
@@ -563,40 +596,30 @@ class GameManager
                     selectedBox,
                     mouse,
                     localRbPos,
-                    glm.vec3.fromValues(10000.0, 10000.0, 0.0),
+                    glm.vec3.fromValues(10000.0, 10000.0, 0.0)
                 );
 
                 this.solver.addForce(this.dragForce);
-
-                console.log(`Started dragging box ID ${selectedBox.id}`);
-            } else
-                console.log("No box selected for dragging.");
+            }
         };
 
-        // ON MOUSE MOVE
-        this.onMouseMove = (event: MouseEvent) =>
-        {
+        this.onMouseMove = (event: MouseEvent) => {
             if (!this.isDragging || !this.draggedBox) return;
 
-            const mouse = toWorld(event);
+            const mouse = this.screenToWorld(event.clientX, event.clientY);
             glm.vec2.copy(this.dragTarget, mouse);
 
-            if (this.dragForce)
-            {
+            if (this.dragForce) {
                 glm.vec2.set(this.dragForce.rA, mouse[0], mouse[1]);
             }
-        }
+        };
 
-        // ON MOUSE UP
-        this.onMouseUp = (event: MouseEvent) =>
-        {
+        this.onMouseUp = (event: MouseEvent) => {
             if (event.button !== 0) return;
 
-            if (this.draggedBox)
-            {
+            if (this.draggedBox) {
                 this.draggedBox.isDragged = false;
-                if (this.dragForce)
-                {
+                if (this.dragForce) {
                     this.solver.removeForce(this.dragForce);
                     this.dragForce = null;
                 }
@@ -606,19 +629,21 @@ class GameManager
             this.draggedBox = null;
         };
 
-        this.canvas.addEventListener('mousedown', this.onMouseDown);
-        this.canvas.addEventListener('mousemove', this.onMouseMove);
-        this.canvas.addEventListener('mouseup', this.onMouseUp);
+        this.canvas.addEventListener("mousedown", this.onMouseDown);
+        this.canvas.addEventListener("mousemove", this.onMouseMove);
+        this.canvas.addEventListener("mouseup", this.onMouseUp);
 
-        // ON R PRESSED
-        this.windowRestart = (event: KeyboardEvent) => 
-        {
+        this.onZoom = applyZoom;
+        this.canvas.addEventListener("wheel", this.onZoom);
+
+        this.windowRestart = (event: KeyboardEvent) => {
             if (event.key === 'r' || event.key === 'R') {
                 this.restartGame();
             }
         };
         window.addEventListener('keydown', this.windowRestart);
     }
+
 }
 
 //================================//

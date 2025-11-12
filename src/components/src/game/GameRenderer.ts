@@ -28,7 +28,7 @@ const vertexSize = 2 * 4; // position
 const indicesPerInstance = 6;  // 2 triangles per quad
 
 const initialInstanceSize = 256;
-const screenUniformSize = 16; // Uniform buffers should be 16-byte aligned. We store 2 floats + 2 pad floats.
+const screenUniformSize = 32; // Uniform buffers should be 16-byte aligned. We store 2 floats + 2 pad floats.
 
 // ================================== //
 class GameRenderer
@@ -88,6 +88,9 @@ class GameRenderer
 
     static xWorldLimit: number = 400;
     static yWorldLimit: number = 300;
+
+    public zoom: number = 1.0;
+    public cameraOffset = { x: 0, y: 0 };
 
     // Texture to render with MSAA
     private msaaTexture: GPUTexture | null = null;
@@ -314,6 +317,24 @@ class GameRenderer
         const encoder = this.device.createCommandEncoder({ label: 'canvas render encoder' });
         const pass = encoder.beginRenderPass(renderPassDescriptor);
 
+        // Modify aspect Ratio in uniform buffer in case of canvas resize
+        if (this.screenUniformBuffer)
+        {
+            const halfW = GameRenderer.xWorldSize * 0.5;
+            const halfH = GameRenderer.yWorldSize * 0.5;
+            const aspect = this.canvas!.width / this.canvas!.height;
+            const screenData = new Float32Array([
+                halfW,
+                halfH,
+                aspect,
+                this.zoom,
+                this.cameraOffset.x,
+                this.cameraOffset.y,
+                0, 0
+            ]);
+            this.device.queue.writeBuffer(this.screenUniformBuffer, 0, screenData.buffer);
+        }
+
         if (this.CubesPipeline && this.changingBuffer)
         {
             const byteLen = this.numInstances * (positionSize + scaleSize);
@@ -524,7 +545,7 @@ class GameRenderer
     //================================//
     private buildBuffers()
     {
-        if (!this.device) return;
+        if (!this.device || !this.canvas) return;
 
         const staticBufferSize = this.maxInstances * (colorSize);
         const changingBufferSize = this.maxInstances * (positionSize + scaleSize);
@@ -592,8 +613,23 @@ class GameRenderer
         });
 
         // Write world size to uniform buffer (won't change)
-        const screenData = new Float32Array([GameRenderer.xWorldSize, GameRenderer.yWorldSize, 0, 0]);
-        this.device.queue.writeBuffer(this.screenUniformBuffer, 0, screenData.buffer, screenData.byteOffset, screenData.byteLength);
+        const halfW = GameRenderer.xWorldSize * 0.5;
+        const halfH = GameRenderer.yWorldSize * 0.5;
+        const aspect = this.canvas!.width / this.canvas!.height;
+        const screenData = new Float32Array([
+            halfW,
+            halfH,
+            aspect,
+            this.zoom,
+            this.cameraOffset.x,
+            this.cameraOffset.y,
+            0, 0
+        ]);
+        this.device.queue.writeBuffer(
+            this.screenUniformBuffer,
+            0,
+            screenData.buffer
+        );
     }
 
     //================================//

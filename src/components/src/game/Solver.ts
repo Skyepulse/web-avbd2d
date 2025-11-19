@@ -9,7 +9,7 @@
 import * as glm from 'gl-matrix';
 import type RigidBox from "./RigidBox";
 import Force from "./Force";
-import Manifold, { type ContactRender } from './Manifold';
+import Manifold, { type ContactRender, type LineRender } from './Manifold';
 import { outerMult, solveLDLT } from '@src/helpers/MathUtils';
 import type GameManager from './GameManager';
 
@@ -33,6 +33,7 @@ class Solver
     public forces: Force[] = [];
 
     public contactsToRender: ContactRender[] = [];
+    public contactLinesToRender: LineRender[] = [];
 
     // Performance: average step() CPU time in ms (updated every perfIntervalMs)
     public avgStepTime: number = 0; // ms
@@ -135,6 +136,8 @@ class Solver
             this.gameManager.logWarn(`Warning: Physics timestep changed from ${this.dt} to ${dt}. This may cause instability.`);
         
         this.contactsToRender = [];
+        this.contactLinesToRender = [];
+
         // Detection: NAIVE O(n^2) FOR NOW
         for (let i = 0; i < this.bodies.length; ++i)
         {
@@ -184,6 +187,7 @@ class Solver
             }
 
             this.contactsToRender.push(...force.getContactRenders());
+            this.contactLinesToRender.push(...force.getContactLines());
 
             for (let j = 0; j < force.getRows(); ++j)
             {

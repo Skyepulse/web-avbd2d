@@ -75,8 +75,17 @@ interface ContactPoint
 }
 
 //================================//
-export interface ContactRender {
+export interface ContactRender 
+{
     pos: glm.vec2;
+}
+
+// ================================== //
+export interface LineRender 
+{
+    posA: glm.vec2;
+    posB: glm.vec2;
+    size: number;
 }
 
 //================================//
@@ -650,6 +659,12 @@ class Manifold extends Force
         }
 
         return renders;
+    }
+
+    // ================================== //
+    public getContactLines(): LineRender[] 
+    {
+        return [];    
     }
 
     // ================================== //

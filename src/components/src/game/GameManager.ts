@@ -417,6 +417,7 @@ class GameManager
             }
 
             this.gameRenderer.updateContacts(this.solver.contactsToRender);
+            this.gameRenderer.updateContactLines(this.solver.contactLinesToRender);
             this.gameRenderer.render();
 
             this.rafID = requestAnimationFrame(frame);

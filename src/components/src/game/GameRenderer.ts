@@ -10,10 +10,12 @@ import cubeVertWGSL from '../shader/cubeShader_vert.wgsl?raw';
 import cubeFragWGSL from '../shader/cubeShader_frag.wgsl?raw';
 import contactVertWGSL from '../shader/contact_vert.wgsl?raw';
 import contactFragWGSL from '../shader/contact_frag.wgsl?raw';
+import contactLinesVertWGSL from '../shader/contactline_vert.wgsl?raw';
+import contactLinesFragWGSL from '../shader/contactline_frag.wgsl?raw';
 
 //================================//
 import type GameManager from "./GameManager";
-import type { ContactRender } from "./Manifold";
+import type { ContactRender, LineRender } from "./Manifold";
 import RigidBox from "./RigidBox";
 import { RequestWebGPUDevice } from "@src/helpers/WebGPUutils";
 import type { ShaderModule, TimestampQuerySet } from "@src/helpers/WebGPUutils";
@@ -50,6 +52,9 @@ class GameRenderer
     private ContactPipeline: GPURenderPipeline | null = null;
     private cubePipelineLayout: GPUPipelineLayout | null = null;
 
+    private ContactLineShaderModule: ShaderModule | null = null;
+    private ContactLinePipeline: GPURenderPipeline | null = null;
+
     // Storage buffers
     private vertexBuffer: GPUBuffer | null = null;
     private indexBuffer: GPUBuffer | null = null;
@@ -60,6 +65,10 @@ class GameRenderer
     private contactVertexBuffer: GPUBuffer | null = null;
     private contactIndexBuffer: GPUBuffer | null = null;
     private contactPositionBuffer: GPUBuffer | null = null;
+
+    private linesVertexBuffer: GPUBuffer | null = null;
+    private linesIndexBuffer: GPUBuffer | null = null;
+    private linesChangingBuffer: GPUBuffer | null = null;
 
     // Timestamp query
     private timestampQuerySet: TimestampQuerySet | null = null;
@@ -82,6 +91,13 @@ class GameRenderer
     private maxContacts: number = 2048;
     private contactIndicesPerInstance: number = 0;
 
+    // Line render specifics
+    private contactLineInformation: Float32Array = new Float32Array(0); // posA, posB, size
+    private numContactLines: number = 0;
+    private maxContactLines: number = 2048;
+    private contactLineIndicesPerInstance: number = 0;
+
+
     // Static world size (matches physics world)
     static xWorldSize: number = 100;
     static yWorldSize: number = 60;
@@ -99,6 +115,7 @@ class GameRenderer
 
     public renderTimeGPU: number = 0; //ms
     public renderTimeCPU: number = 0; //ms
+
     // Performance averaging (compute averages every `perfIntervalMs` milliseconds)
     private perfIntervalMs: number = 1000; // ms
     private perfIntervalStart: number = performance.now();
@@ -289,6 +306,28 @@ class GameRenderer
             this.device.queue.writeBuffer(this.contactPositionBuffer, 0, this.contactPositions as BufferSource);
     }
 
+    // ================================== //
+    public updateContactLines(lines: LineRender[]) 
+    {
+        this.numContactLines = Math.min(lines.length, this.maxContactLines);
+        if (this.numContactLines === 0) return;
+
+        if (this.contactLineInformation.length < this.numContactLines * 5)
+            this.contactLineInformation = new Float32Array(this.maxContactLines * 5);
+
+        for (let i = 0; i < this.numContactLines; ++i) 
+        {
+            this.contactLineInformation[i * 5 + 0] = lines[i].posA[0];
+            this.contactLineInformation[i * 5 + 1] = lines[i].posA[1];
+            this.contactLineInformation[i * 5 + 2] = lines[i].posB[0];
+            this.contactLineInformation[i * 5 + 3] = lines[i].posB[1];
+            this.contactLineInformation[i * 5 + 4] = lines[i].size;
+        }
+
+        if (this.device && this.linesChangingBuffer)
+            this.device.queue.writeBuffer(this.linesChangingBuffer, 0, this.contactLineInformation as BufferSource);
+    }
+
     //================================//
     public async render()
     {
@@ -360,6 +399,16 @@ class GameRenderer
             pass.drawIndexed(this.contactIndicesPerInstance, this.numContacts, 0, 0, 0);
         } else
             this.gameManager?.logWarn("ContactPipeline or contact buffers not initialized.");
+
+        if (this.ContactLinePipeline && this.linesVertexBuffer && this.linesIndexBuffer && this.linesChangingBuffer)
+        {
+            pass.setPipeline(this.ContactLinePipeline);
+            pass.setVertexBuffer(0, this.linesVertexBuffer);
+            pass.setVertexBuffer(1, this.linesChangingBuffer);
+            pass.setIndexBuffer(this.linesIndexBuffer, "uint16");
+            pass.setBindGroup(0, this.screenBindGroup!);
+            pass.drawIndexed(this.contactLineIndicesPerInstance, this.numContactLines, 0, 0, 0);
+        }
          
         pass.end();
 
@@ -475,6 +524,7 @@ class GameRenderer
         this.staticCpuArray = new Uint8Array(this.maxInstances * 4);
         this.numContacts = 0;
         this.contactPositions = new Float32Array(0);
+        this.contactLineInformation = new Float32Array(0);
 
         if (this.observer && this.canvas) {
             this.observer.unobserve(this.canvas);
@@ -490,6 +540,9 @@ class GameRenderer
         destroy(this.contactVertexBuffer); this.contactVertexBuffer = null;
         destroy(this.contactIndexBuffer); this.contactIndexBuffer = null;
         destroy(this.contactPositionBuffer); this.contactPositionBuffer = null;
+        destroy(this.linesVertexBuffer); this.linesVertexBuffer = null;
+        destroy(this.linesIndexBuffer); this.linesIndexBuffer = null;
+        destroy(this.linesChangingBuffer); this.linesChangingBuffer = null;
         destroy(this.screenUniformBuffer); this.screenUniformBuffer = null;
 
         try { this.msaaTexture?.destroy(); } catch {}
@@ -498,8 +551,12 @@ class GameRenderer
 
         this.CubesPipeline = null;
         this.ContactPipeline = null;
+        this.ContactLinePipeline = null;
+
         this.CubesShaderModule = null;
         this.ContactShaderModule = null;
+        this.ContactLineShaderModule = null;
+
         this.cubePipelineLayout = null;
         this.timestampQuerySet = null;
     }
@@ -590,6 +647,30 @@ class GameRenderer
         this.contactPositionBuffer = this.device.createBuffer({
             label: 'Contact position buffer',
             size: this.maxContacts * 2 * 4, // 2 floats (x, y) per contact
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+        });
+
+        // Contact Line Buffers
+        const lineTopology = createQuadVertices();
+        this.contactLineIndicesPerInstance = lineTopology.numVertices;
+
+        this.linesVertexBuffer = this.device.createBuffer({
+            label: 'Contact line vertex buffer',
+            size: lineTopology.vertexData.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+        });
+        this.device.queue.writeBuffer(this.linesVertexBuffer, 0, lineTopology.vertexData as BufferSource);
+
+        this.linesIndexBuffer = this.device.createBuffer({
+            label: 'Contact line index buffer',
+            size: lineTopology.indexData.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
+        });
+        this.device.queue.writeBuffer(this.linesIndexBuffer, 0, lineTopology.indexData as BufferSource);
+
+        this.linesChangingBuffer = this.device.createBuffer({
+            label: 'Contact line changing buffer',
+            size: this.maxContactLines * 5 * 4, // posA(x,y), posB(x,y), size, 5 floats total
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
         });
 
@@ -756,7 +837,9 @@ class GameRenderer
         if (!this.device || !this.presentationFormat || !this.cubePipelineLayout) return;
 
         this.ContactShaderModule = CreateShaderModule(this.device, contactVertWGSL, contactFragWGSL, "Contact Shader");
-        if (!this.ContactShaderModule)
+        this.ContactLineShaderModule = CreateShaderModule(this.device, contactLinesVertWGSL, contactLinesFragWGSL, "Contact Line Shader");
+
+        if (!this.ContactShaderModule || !this.ContactLineShaderModule)
         {
             this.gameManager?.logWarn("Failed to create contact shader modules.");
             return;
@@ -782,6 +865,37 @@ class GameRenderer
             },
             fragment: {
                 module: this.ContactShaderModule.fragment,
+                entryPoint: "fs",
+                targets: [{ format: this.presentationFormat }],
+            },
+            primitive: { topology: "triangle-list" },
+            multisample: { count: this.sampleCount },
+        });
+
+        this.ContactLinePipeline = this.device.createRenderPipeline({
+            label: "Contact Lines Render Pipeline",
+            layout: this.cubePipelineLayout,
+            vertex: {
+                module: this.ContactLineShaderModule.vertex,
+                entryPoint: "vs",
+                buffers: [
+                    {
+                        arrayStride: 8,
+                        attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }],
+                    },
+                    {
+                        arrayStride: 20, // posA(x,y), posB(x,y), size (5 floats)
+                        stepMode: "instance",
+                        attributes: [
+                            { shaderLocation: 1, offset: 0, format: "float32x2" },
+                            { shaderLocation: 2, offset: 8, format: "float32x2" },
+                            { shaderLocation: 3, offset: 16, format: "float32" }
+                        ]
+                    }
+                ]
+            },
+            fragment: {
+                module: this.ContactLineShaderModule.fragment,
                 entryPoint: "fs",
                 targets: [{ format: this.presentationFormat }],
             },

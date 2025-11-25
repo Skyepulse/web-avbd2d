@@ -153,10 +153,8 @@ class Solver
                 {
                     if(!bodyA.isConstrainedTo(bodyB))
                     {
-                        let newManifold: Manifold = new Manifold(bodyA, bodyB);
+                        let newManifold: Manifold = new Manifold([bodyA, bodyB]);
                         this.forces.push(newManifold);
-                        bodyA.forces.push(newManifold);
-                        bodyB.forces.push(newManifold);
                     }
                 }
             }
@@ -174,15 +172,7 @@ class Solver
                 this.forces.splice(i, 1);
                 --i;
 
-                if (force.bodyA)
-                {
-                    const indexA = force.bodyA.forces.indexOf(force);
-                    if (indexA !== -1) force.bodyA.forces.splice(indexA, 1);
-                }
-
-                const indexB = force.bodyB.forces.indexOf(force);
-                if (indexB !== -1) force.bodyB.forces.splice(indexB, 1);
-
+                force.destroy();
                 continue;
             }
 
@@ -401,27 +391,11 @@ class Solver
     {
         if (this.forces.indexOf(force) === -1)
             this.forces.push(force);
-
-        if (force.bodyA)
-        {
-            if (force.bodyA.forces.indexOf(force) === -1)
-                force.bodyA.forces.push(force);
-        }
-        if (force.bodyB && force.bodyB.forces.indexOf(force) === -1)
-            force.bodyB.forces.push(force);
     }
 
     // ================================== //
     public removeForce(force: Force): void
     {
-        if (force.bodyA)
-        {
-            const indexA = force.bodyA.forces.indexOf(force);
-            if (indexA !== -1) force.bodyA.forces.splice(indexA, 1);
-        }
-        const indexB = force.bodyB.forces.indexOf(force);
-        if (indexB !== -1) force.bodyB.forces.splice(indexB, 1);
-
         const index = this.forces.indexOf(force);
         if (index !== -1)
             this.forces.splice(index, 1);

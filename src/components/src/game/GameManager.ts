@@ -349,8 +349,7 @@ class GameManager
             }
 
             const joint = new Joint(
-                bodyA,
-                bodyB,
+                [bodyA, bodyB],
                 jf.rA_offset_center,
                 jf.rB_offset_center,
                 jf.stiffness,
@@ -591,8 +590,7 @@ class GameManager
                 glm.vec2.copy(this.dragTarget, mouse);
 
                 this.dragForce = new Joint(
-                    null,
-                    selectedBox,
+                    [selectedBox],
                     mouse,
                     localRbPos,
                     glm.vec3.fromValues(10000.0, 10000.0, 0.0)

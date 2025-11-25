@@ -272,13 +272,23 @@ class Manifold extends Force
     private oldContacts: ContactPoint[] = [];
     private friction: number = 0; // Friction coefficient
 
-    //=============== PUBLIC =================//
-    constructor(bodyA: RigidBox, bodyB: RigidBox)
-    {
-        if (!bodyA)
-            throw new Error("Manifold requires both bodyA and bodyB to be defined.");
+    private bodyA: RigidBox;
+    private bodyB: RigidBox;
 
-        super(bodyA, bodyB);
+    //=============== PUBLIC =================//
+    constructor(bodiesArray: (RigidBox | null)[])
+    {
+        super(bodiesArray);
+
+        // Need exactly two bodies
+        if (this.getNumberOfBodies() != 2)
+        {
+            console.error("Manifold force requires exactly two bodies.");
+            this.destroy();
+        }
+
+        this.bodyA = this.bodies[0];;
+        this.bodyB = this.bodies[1];
 
         for (let i = 0; i < Force.MAX_ROWS; ++i)
         {

@@ -10,8 +10,7 @@ import type RigidBox from "./RigidBox";
 import type { ContactRender, LineRender } from './Manifold';
 class Force
 {
-    public bodyA: RigidBox | null;
-    public bodyB: RigidBox;
+    public bodies: RigidBox[] = [];
 
     public static readonly MAX_ROWS: number = 4;
 
@@ -26,10 +25,15 @@ class Force
     public lambda: number[] = [];
 
     //=============== PUBLIC =================//
-    constructor(bodyA: RigidBox | null, bodyB: RigidBox)
+    constructor(bodiesArray: (RigidBox | null)[])
     {
-        this.bodyA = bodyA;
-        this.bodyB = bodyB;
+        bodiesArray.forEach((body) => {
+            if (body)
+            {
+                this.bodies.push(body);
+                body.forces.push(this);
+            }
+        });
 
         for (let i = 0; i < Force.MAX_ROWS; ++i)
         {
@@ -105,20 +109,26 @@ class Force
     }
 
     // ================================== //
+    public getNumberOfBodies(): number {
+        return this.bodies.length;
+    }
+
+    // ================================== //
+    public getBodies(): RigidBox[] {
+        return this.bodies;
+    }
+
+    // ================================== //
     public destroy(): void {
-        // Break mutual links - remove this force from both bodies
-        if (this.bodyA) {
-            const i = this.bodyA.forces.indexOf(this);
-            if (i !== -1) this.bodyA.forces.splice(i, 1);
-        }
-        if (this.bodyB) {
-            const i = this.bodyB.forces.indexOf(this);
-            if (i !== -1) this.bodyB.forces.splice(i, 1);
-        }
+
+        // Break mutual links - remove this force from bodies
+        this.bodies.forEach((body) => {
+            const i = body.forces.indexOf(this);
+            if (i !== -1) body.forces.splice(i, 1);
+        });
 
         // Nullify references AFTER removing from arrays to help GC
-        this.bodyA = null as any;
-        this.bodyB = null as any;
+        this.bodies.length = 0;
 
         // Release arrays
         this.J.length = 0;

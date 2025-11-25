@@ -13,15 +13,25 @@ class Joint extends Force
     private torqueArm: number = 0;
     private restAngle: number = 0;
 
+    private bodyA: RigidBox | null = null;
+    private bodyB: RigidBox;
+
     // ================================== //
-    constructor(bodyA: RigidBox | null, bodyB: RigidBox, 
+    constructor(bodiesArray: (RigidBox | null)[], 
         rA: glm.vec2, rB: glm.vec2, 
         stiffness: glm.vec3 = glm.vec3.fromValues(Infinity, Infinity, Infinity), fracture: number = Infinity)
     {
-        super(bodyA, bodyB);
+        // This force must require 1 or 2 bodies
+        super(bodiesArray);
 
-        if (!bodyB)
-            throw new Error("Joint requires at least bodyB to be defined.");
+        if (this.getNumberOfBodies() < 1 || this.getNumberOfBodies() > 2)
+        {
+            console.error("Joint force requires 1 or 2 bodies.");
+            this.destroy();
+        }
+
+        this.bodyA = (this.getNumberOfBodies() == 2 ? this.bodies[0] : null);
+        this.bodyB = (this.getNumberOfBodies() == 2 ? this.bodies[1] : this.bodies[0]);
 
         this.rA = glm.vec2.clone(rA);
         this.rB = glm.vec2.clone(rB);
@@ -35,9 +45,9 @@ class Joint extends Force
 
         this.fracture[2] = fracture;
 
-        this.restAngle = (bodyA ? bodyA.getPosition()[2] : 0) - bodyB.getPosition()[2];
-        const tA: glm.vec2 = bodyA ? bodyA.getScale() : glm.vec2.fromValues(0, 0);
-        const tB: glm.vec2 = bodyB.getScale();
+        this.restAngle = (this.bodyA ? this.bodyA.getPosition()[2] : 0) - this.bodyB.getPosition()[2];
+        const tA: glm.vec2 = this.bodyA ? this.bodyA.getScale() : glm.vec2.fromValues(0, 0);
+        const tB: glm.vec2 = this.bodyB.getScale();
         this.torqueArm = glm.vec2.sqrLen(glm.vec2.add(glm.vec2.create(), tA, tB));
     }
 

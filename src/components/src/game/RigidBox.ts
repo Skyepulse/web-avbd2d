@@ -100,9 +100,9 @@ class RigidBox
         for (let i = 0; i < this.forces.length; ++i)
         {
             const f = this.forces[i];
-
-            if (f.bodyA === this && f.bodyB === body) return true;
-            if (f.bodyB === this && f.bodyA === body) return true;
+            const possibleBodies = f.getBodies();
+            if (possibleBodies.indexOf(body) !== -1)
+                return true;
         }
 
         return false;

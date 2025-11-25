@@ -18,6 +18,15 @@ export function scaleByValue(m: glm.mat3, v: number): glm.mat3
   return out;
 }
 
+// ================================== //
+export function outerMult2D(a: glm.vec2, b: glm.vec2): glm.mat2
+{
+  const out = glm.mat2.create();
+  out[0] = a[0] * b[0]; out[1] = a[0] * b[1];
+  out[2] = a[1] * b[0]; out[3] = a[1] * b[1];
+  return out;
+}
+
 //================================//
 export function outerMult(a: glm.vec3, b: glm.vec3): glm.mat3
 {

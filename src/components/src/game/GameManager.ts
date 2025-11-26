@@ -21,7 +21,8 @@ export interface performanceInformation
 {
     cpuFrameTime: number,
     gpuFrameTime: number,
-    cpuSolverTime: number
+    cpuSolverTime: number,
+    currentFPS: number
 }
 
 // ================================== //
@@ -47,6 +48,9 @@ class GameManager
     private solver: Solver;
 
     private lastFrameTime: number = 0;
+    public currentFPS = 0;
+    private frameCount = 0;
+    private fpsAccum = 0;
 
     private onMouseDown?: (e: MouseEvent) => void;
     private onMouseMove?: (e: MouseEvent) => void;
@@ -298,7 +302,8 @@ class GameManager
         return {
             cpuFrameTime: this.gameRenderer.renderTimeCPU,
             gpuFrameTime: this.gameRenderer.renderTimeGPU,
-            cpuSolverTime: this.solver.avgStepTime
+            cpuSolverTime: this.solver.avgStepTime,
+            currentFPS: this.currentFPS
         };
     }
 
@@ -410,6 +415,9 @@ class GameManager
         let accumulator = 0;
 
         this.lastFrameTime = 0;
+        this.frameCount = 0;
+        this.fpsAccum = 0;
+        this.currentFPS = 0;
 
         const frame = (time: number) => {
             if (!this.running) return;
@@ -425,6 +433,16 @@ class GameManager
             }
 
             const dt = (time - this.lastFrameTime) / 1000;
+            this.fpsAccum += dt;
+            this.frameCount++;
+
+            if (this.fpsAccum >= 1.0) 
+            {
+                this.currentFPS = this.frameCount / this.fpsAccum;
+                this.fpsAccum = 0;
+                this.frameCount = 0;
+            } 
+
             this.lastFrameTime = time;
             accumulator += dt;
 

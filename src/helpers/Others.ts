@@ -1,5 +1,5 @@
 import RigidBox from "@src/components/src/game/RigidBox";
-import { vec2, vec3, mat2 } from 'gl-matrix';
+import { vec2, vec3 } from 'gl-matrix';
 
 //================================//
 export function getInfoElement(): HTMLElement | null 

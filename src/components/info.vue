@@ -12,6 +12,10 @@
             <label>CPU Solver Time:</label>
             <span id="cpuSolverTimeValue" ref="cpuSolverTimeValue">0.0 ms</span>
         </div>
+        <div id="fps" class="flex flex-row space-x-1">
+            <label>FPS:</label>
+            <span id="fpsValue" ref="fpsValue">0.0 FPS</span>
+        </div>
     </div>
 </template>
 
@@ -37,6 +41,7 @@
     const cpuFrameTimeValue = ref<HTMLLabelElement | null>(null);
     const gpuFrameTimeValue = ref<HTMLLabelElement | null>(null);
     const cpuSolverTimeValue = ref<HTMLLabelElement | null>(null);
+    const fpsValue = ref<HTMLLabelElement | null>(null);
     const rafId = ref<number | null>(null);
 
     // ================================== //
@@ -49,6 +54,7 @@
         if (cpuFrameTimeValue.value) cpuFrameTimeValue.value.textContent = `${values.cpuFrameTime.toFixed(2)} ms`;
         if (gpuFrameTimeValue.value) gpuFrameTimeValue.value.textContent = `${values.gpuFrameTime.toFixed(2)} ms`;
         if (cpuSolverTimeValue.value) cpuSolverTimeValue.value.textContent = `${values.cpuSolverTime.toFixed(2)} ms`;
+        if (fpsValue.value) fpsValue.value.textContent = `${values.currentFPS.toFixed(2)} FPS`;
     }
 
     // ================================== //

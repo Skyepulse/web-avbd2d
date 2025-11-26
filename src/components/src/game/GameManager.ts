@@ -411,13 +411,15 @@ class GameManager
         }
         this.running = true;
 
-        const fixedStep = 1 / 60; // 60 Hz physics
+        const fixedStep = 1 / 60;
         let accumulator = 0;
 
         this.lastFrameTime = 0;
         this.frameCount = 0;
         this.fpsAccum = 0;
         this.currentFPS = 0;
+
+        const MAX_PHYSICS_STEPS = 5;
 
         const frame = (time: number) => {
             if (!this.running) return;
@@ -436,37 +438,42 @@ class GameManager
             this.fpsAccum += dt;
             this.frameCount++;
 
-            if (this.fpsAccum >= 1.0) 
-            {
+            if (this.fpsAccum >= 1.0) {
                 this.currentFPS = this.frameCount / this.fpsAccum;
-                this.fpsAccum = 0;
                 this.frameCount = 0;
-            } 
-
-            this.lastFrameTime = time;
-            accumulator += dt;
-
-            // Run physics in fixed steps
-            while (accumulator >= fixedStep) {
-                this.solver.step(fixedStep);
-                accumulator -= fixedStep;
+                this.fpsAccum = 0;
             }
 
-            // Update transforms
+            this.lastFrameTime = time;
+
+            accumulator += dt;
+
+            let steps = 0;
+            while (accumulator >= fixedStep && steps < MAX_PHYSICS_STEPS) {
+                this.solver.step(fixedStep);
+                accumulator -= fixedStep;
+                steps++;
+            }
+
+            // If we missed too much → drop accumulated time
+            if (steps === MAX_PHYSICS_STEPS) {
+                accumulator = 0;
+            }
+
             for (let i = 0; i < this.solver.bodies.length; ++i) {
                 const body = this.solver.bodies[i];
                 const pos = body.getPosition();
 
-                if (pos[0] < -GameRenderer.xWorldLimit || pos[0] > GameRenderer.xWorldLimit ||
-                    pos[1] < -GameRenderer.yWorldLimit || pos[1] > GameRenderer.yWorldLimit) 
-                {
+                if (
+                    pos[0] < -GameRenderer.xWorldLimit || pos[0] > GameRenderer.xWorldLimit ||
+                    pos[1] < -GameRenderer.yWorldLimit || pos[1] > GameRenderer.yWorldLimit
+                ) {
                     this.solver.removeRigidBox(body);
                     this.gameRenderer.removeInstance(body.id);
                     continue;
                 }
 
-                const posArray = new Float32Array([pos[0], pos[1], pos[2]]);
-                this.gameRenderer.updateInstancePosition(body.id, posArray);
+                this.gameRenderer.updateInstancePosition(body.id, new Float32Array([pos[0], pos[1], pos[2]]));
             }
 
             this.gameRenderer.updateContacts(this.solver.contactsToRender);
@@ -698,8 +705,8 @@ class GameManager
     // =============== HARDCODED LEVELS =================== //
     public loadHardcodedLevel7(): void
     {
-        const W = 6;
-        const H = 7;
+        const W = 8;
+        const H = 9;
         const spacing = 2.0;
         const mass = 0.1;
         const stiffness = 100.0;

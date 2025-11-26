@@ -24,6 +24,16 @@ export interface JointForce {
 }
 
 // ================================== //
+export interface SpringForce {
+    bodyAIndex: number | null;
+    bodyBIndex: number;
+    rA_offset_center: glm.vec2;
+    rB_offset_center: glm.vec2;
+    stiffness: number;
+    restLength: number;
+}
+
+// ================================== //
 export interface Scene {
     Static: GObject[];
     Dynamic: GObject[];
@@ -34,7 +44,8 @@ export interface Scene {
 export interface Level {
     id: number;
     title: string;
-    Scene: Scene;
+    hardcoded?: boolean;
+    Scene?: Scene;
 }
 
 //================================//
@@ -42,7 +53,8 @@ interface LevelsFile {
     Levels: {
         LevelID: number;
         LevelName: string;
-        Scene: {
+        hardcoded?: boolean;
+        Scene?: {
             Static?: {
                 Position: number[];
                 Rotation: number[];
@@ -59,13 +71,21 @@ interface LevelsFile {
                 Friction: number;
                 Color: string;
             }[];
-            JointForces: {
+            JointForces?: {
                 bodyAIndex: number | null;
                 bodyBIndex: number;
                 rA_offset_center: number[];
                 rB_offset_center: number[];
                 stiffness: number[];
                 fracture: number;
+            }[];
+            SpringForces?: {
+                bodyAIndex: number | null;
+                bodyBIndex: number;
+                rA_offset_center: number[];
+                rB_offset_center: number[];
+                stiffness: number;
+                restLength: number;
             }[];
         };
     }[];
@@ -80,9 +100,10 @@ Levels.value?.Levels.map(l => (
 {
     id: l.LevelID,
     title: l.LevelName,
+    hardcoded: l.hardcoded,
     Scene: 
     {
-        Static: l.Scene.Static?.map(obj => ({
+        Static: l.Scene?.Static?.map(obj => ({
             Position: glm.vec2.fromValues(obj.Position[0], obj.Position[1]),
             Rotation: degreesToRadians(obj.Rotation[0]),
             InitVelocity: glm.vec3.fromValues(obj.InitVelocity[0], obj.InitVelocity[1], obj.InitVelocity[2]),
@@ -90,7 +111,7 @@ Levels.value?.Levels.map(l => (
             Friction: obj.Friction,
             Color: obj.Color,
         })),
-        Dynamic: l.Scene.Dynamic?.map(obj => ({
+        Dynamic: l.Scene?.Dynamic?.map(obj => ({
             Position: glm.vec2.fromValues(obj.Position[0], obj.Position[1]),
             Rotation: degreesToRadians(obj.Rotation[0]),
             InitVelocity: glm.vec3.fromValues(obj.InitVelocity[0], obj.InitVelocity[1], obj.InitVelocity[2]),
@@ -98,13 +119,21 @@ Levels.value?.Levels.map(l => (
             Friction: obj.Friction,
             Color: obj.Color
         })) ?? [],
-        JointForces: l.Scene.JointForces?.map(jf => ({
+        JointForces: l.Scene?.JointForces?.map(jf => ({
             bodyAIndex: jf.bodyAIndex,
             bodyBIndex: jf.bodyBIndex,
             rA_offset_center: glm.vec2.fromValues(jf.rA_offset_center[0], jf.rA_offset_center[1]),
             rB_offset_center: glm.vec2.fromValues(jf.rB_offset_center[0], jf.rB_offset_center[1]),
             stiffness: glm.vec3.fromValues(jf.stiffness[0], jf.stiffness[1], jf.stiffness[2]),
             fracture: jf.fracture,
+        })),
+        SpringForces: l.Scene?.SpringForces?.map(sf => ({
+            bodyAIndex: sf.bodyAIndex,
+            bodyBIndex: sf.bodyBIndex,
+            rA_offset_center: glm.vec2.fromValues(sf.rA_offset_center[0], sf.rA_offset_center[1]),
+            rB_offset_center: glm.vec2.fromValues(sf.rB_offset_center[0], sf.rB_offset_center[1]),
+            stiffness: sf.stiffness,
+            restLength: sf.restLength,
         })),
     }
 }));

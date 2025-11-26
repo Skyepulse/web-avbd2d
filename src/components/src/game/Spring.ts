@@ -2,6 +2,7 @@ import Force from "./Force";
 import * as glm from 'gl-matrix';
 import RigidBox from "./RigidBox";
 import type { ContactRender, LineRender } from "./Manifold";
+import { outerMat2D, rotate2D, scale2D, scaleMat2D, transform2D } from "@src/helpers/MathUtils";
 
 // ================================== //
 class Spring extends Force
@@ -38,25 +39,10 @@ class Spring extends Force
         this.stiffness[0] = stiffness;
         if (this.restLength < 0)
         {
-            // Compute transformed position of rA and rB
-            let posA: glm.vec2 = glm.vec2.fromValues(0, 0);
-            let posB: glm.vec2 = glm.vec2.fromValues(0, 0);
+            const posA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+            const posB: glm.vec2 = transform2D(this.bodyB.getPosition(), this.rB);
 
-            if (this.bodyA) 
-            {
-                // Transform in the way:
-                // bodyA.rotation * rA + bodyA.position
-                const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-                glm.vec2.transformMat2(posA, this.rA, rotMatrixA);
-                glm.vec2.add(posA, posA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-            }
-
-            const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-            glm.vec2.transformMat2(posB, this.rB, rotMatrixB);
-            glm.vec2.add(posB, posB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
-
-            let d: glm.vec2 = glm.vec2.create();
-            glm.vec2.subtract(d, posB, posA);
+            const d = glm.vec2.subtract(glm.vec2.create(), posA, posB);
             this.restLength = glm.vec2.length(d);
         }
     }
@@ -74,28 +60,10 @@ class Spring extends Force
     // ================================== //
     public computeConstraints(_alpha: number): void
     {
-        let posA: glm.vec2 = glm.vec2.fromValues(0, 0);
-        let posB: glm.vec2 = glm.vec2.fromValues(0, 0);
+        const posA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+        const posB: glm.vec2 = transform2D(this.bodyB.getPosition(), this.rB);
 
-        if (this.bodyA) 
-        {
-            // Transform in the way:
-            // bodyA.rotation * rA + bodyA.position
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(posA, this.rA, rotMatrixA);
-            glm.vec2.add(posA, posA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-        } 
-        else
-        {
-            glm.vec2.copy(posA, this.rA);
-        }
-
-        const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-        glm.vec2.transformMat2(posB, this.rB, rotMatrixB);
-        glm.vec2.add(posB, posB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
-
-        let d: glm.vec2 = glm.vec2.create();
-        glm.vec2.subtract(d, posB, posA);
+        const d = glm.vec2.subtract(glm.vec2.create(), posA, posB);
 
         const L = glm.vec2.length(d);
         this.C[0] = L - this.restLength;
@@ -104,28 +72,10 @@ class Spring extends Force
     // ================================== //
     public computeDerivatives(body: RigidBox): void 
     {
-        let posA: glm.vec2 = glm.vec2.fromValues(0, 0);
-        let posB: glm.vec2 = glm.vec2.fromValues(0, 0);
-
-        if (this.bodyA) 
-        {
-            // Transform in the way:
-            // bodyA.rotation * rA + bodyA.position
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(posA, this.rA, rotMatrixA);
-            glm.vec2.add(posA, posA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-        } 
-        else
-        {
-            glm.vec2.copy(posA, this.rA);
-        }
-
-        const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-        glm.vec2.transformMat2(posB, this.rB, rotMatrixB);
-        glm.vec2.add(posB, posB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
-
-        let d: glm.vec2 = glm.vec2.create();
-        glm.vec2.subtract(d, posB, posA);
+        const posA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+        const posB: glm.vec2 = transform2D(this.bodyB.getPosition(), this.rB);
+        
+        const d = glm.vec2.subtract(glm.vec2.create(), posA, posB);
 
         const L = glm.vec2.length(d);
         const L2 = glm.vec2.dot(d, d);
@@ -138,45 +88,48 @@ class Spring extends Force
         }
 
         const n: glm.vec2 = glm.vec2.scale(glm.vec2.create(), d, 1 / L);
-        const dxx: glm.mat2 = glm.mat2.fromValues(
-            1 / L - (d[0] * d[0]) / (L2 * L),   -(d[0] * d[1]) / (L2 * L),
-            -(d[0] * d[1]) / (L2 * L),          1 / L - (d[1] * d[1]) / (L2 * L)
-        );
+
+        //(I - outer(n, n) / dlen2) / dlen
+        let outernn = outerMat2D(n, n);
+        outernn = scaleMat2D(outernn, 1 / L2);
+        let dxx = glm.mat2.subtract(glm.mat2.create(), glm.mat2.fromValues(1, 0, 0, 1), outernn);
+        dxx = scaleMat2D(dxx, 1 / L);
 
         const S: glm.mat2 = glm.mat2.fromValues(0, -1, 1, 0);
         
         if (body === this.bodyA)
         {
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            let r: glm.vec2 = glm.vec2.transformMat2d(glm.vec2.create(), this.rA, rotMatrixA);
+            
+            const r = rotate2D(this.rA, this.bodyA.getPosition()[2]);
 
-            let SrA: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), this.rA, S);
-            let Sr: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), SrA, rotMatrixA);
+            const SrA: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), this.rA, S);
+            const Sr = rotate2D(SrA, this.bodyA.getPosition()[2]);
 
-            let dxr: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), Sr, dxx);
-            let drr: number = glm.vec2.dot(Sr, dxr) - glm.vec2.dot(n, r);
+            const dxr: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), Sr, dxx);
+            const drr: number = glm.vec2.dot(Sr, dxr) - glm.vec2.dot(n, r);
 
             this.J[0] = glm.vec3.fromValues(n[0], n[1], glm.vec2.dot(n, Sr));
             this.H[0] = glm.mat3.fromValues(
-                dxx[0], dxx[1], dxr[0],
-                dxx[2], dxx[3], dxr[1],
+                dxx[0], dxx[2], dxr[0],
+                dxx[1], dxx[3], dxr[1],
                 dxr[0], dxr[1], drr
             );
         }
         else
         {
-            const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-            let r: glm.vec2 = glm.vec2.transformMat2d(glm.vec2.create(), this.rB, rotMatrixB);
+            const r = rotate2D(this.rB, this.bodyB.getPosition()[2]);
 
-            let SrA: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), this.rB, S);
-            let Sr: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), SrA, rotMatrixB);
-            let dxr: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), Sr, dxx);
-            let drr: number = glm.vec2.dot(Sr, dxr) - glm.vec2.dot(n, r);
+            const SrB: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), this.rB, S);
+            const Sr = rotate2D(SrB, this.bodyB.getPosition()[2]);
+            const minusSr = scale2D(Sr, -1);
 
-            this.J[0] = glm.vec3.fromValues(n[0], n[1], glm.vec2.dot(n, Sr));
+            const dxr: glm.vec2 = glm.vec2.transformMat2(glm.vec2.create(), minusSr, dxx);
+            const drr: number = glm.vec2.dot(Sr, dxr) + glm.vec2.dot(n, r);
+
+            this.J[0] = glm.vec3.fromValues(-n[0], -n[1], glm.vec2.dot(n, minusSr));
             this.H[0] = glm.mat3.fromValues(
-                dxx[0], dxx[1], dxr[0],
-                dxx[2], dxx[3], dxr[1],
+                dxx[0], dxx[2], dxr[0],
+                dxx[1], dxx[3], dxr[1],
                 dxr[0], dxr[1], drr
             );
         }

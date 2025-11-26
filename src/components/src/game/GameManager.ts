@@ -13,6 +13,8 @@ import Solver from "./Solver";
 import { rand, randomPosInRectRot, randomColorUint8 } from "@src/helpers/MathUtils";
 import { useLevels, type GObject } from '@src/helpers/Levels';
 import Joint from './Joint';
+import Spring from './Spring';
+import { createParticle } from '@src/helpers/Others';
 
 // ================================== //
 export interface performanceInformation
@@ -315,8 +317,21 @@ class GameManager
         if (!this.gameRenderer.isInitialized()) {
             await this.gameRenderer.initialize(); // first load only
         }
-
         this.initializeWindowEvents();
+
+        if (level.hardcoded)
+        {
+            const ID = level.id;
+            // call function LoadHardcodedLevelX based on level id
+            const funcName = `loadHardcodedLevel${ID}`;
+            if (typeof (this as any)[funcName] === "function") {
+                (this as any)[funcName]();
+            } 
+            else
+                this.logWarn(`Hardcoded level function ${funcName} not found.`);
+            this.startMainLoop();
+            return;
+        }
 
         const loadObject = (obj: GObject, isStatic: boolean) =>
         {
@@ -334,11 +349,11 @@ class GameManager
         }
 
         // Load Static Objects (mass = 0)
-        level.Scene.Static?.forEach(obj => loadObject(obj, true));
+        level.Scene?.Static?.forEach(obj => loadObject(obj, true));
         // Load Dynamic Objects (mass > 0)
-        level.Scene.Dynamic?.forEach(obj => loadObject(obj, false));
+        level.Scene?.Dynamic?.forEach(obj => loadObject(obj, false));
 
-        level.Scene.JointForces?.forEach(jf => 
+        level.Scene?.JointForces?.forEach(jf => 
         {
             const bodyA = jf.bodyAIndex !== null ? this.solver.bodies[jf.bodyAIndex] : null;
             const bodyB = this.solver.bodies[jf.bodyBIndex];
@@ -357,6 +372,27 @@ class GameManager
             );
 
             this.solver.addForce(joint);
+        });
+
+        level.Scene?.SpringForces?.forEach(sf =>
+        {
+            const bodyA = sf.bodyAIndex !== null ? this.solver.bodies[sf.bodyAIndex] : null;
+            const bodyB = this.solver.bodies[sf.bodyBIndex];
+
+            if (!bodyB) {
+                this.logWarn(`Spring force bodyBIndex ${sf.bodyBIndex} is invalid.`);
+                return;
+            }
+
+            const spring = new Spring(
+                [bodyA, bodyB],
+                sf.rA_offset_center,
+                sf.rB_offset_center,
+                sf.stiffness,
+                sf.restLength
+            );
+
+            this.solver.addForce(spring);
         });
 
         this.startMainLoop();
@@ -639,6 +675,147 @@ class GameManager
             }
         };
         window.addEventListener('keydown', this.windowRestart);
+    }
+
+    // =============== HARDCODED LEVELS =================== //
+    public loadHardcodedLevel7(): void
+    {
+        const W = 6;
+        const H = 7;
+        const spacing = 2.0;
+        const mass = 0.1;
+        const stiffness = 100.0;
+
+        const cloth: RigidBox[][] = [];
+
+        // Particles
+        for (let y = 0; y < H; y++)
+        {
+            cloth[y] = [];
+            for (let x = 0; x < W; x++)
+            {
+                const px = (x - W * 0.5) * spacing;
+                const py = (H - y) * spacing + 8.0;
+
+                const p = createParticle(glm.vec2.fromValues(px, py), mass, "#ffffff");
+                p.id = this.gameRenderer.addInstanceBox(p);
+                this.solver.addRigidBox(p);
+
+                cloth[y][x] = p;
+            }
+        }
+
+        // Structural springs
+        for (let y = 0; y < H; y++)
+        {
+            for (let x = 0; x < W; x++)
+            {
+                if (x < W - 1)
+                {
+                    const s = new Spring(
+                        [cloth[y][x], cloth[y][x+1]],
+                        glm.vec2.fromValues(0,0),
+                        glm.vec2.fromValues(0,0),
+                        stiffness,
+                        spacing
+                    );
+                    this.solver.addForce(s);
+                }
+
+                if (y < H - 1)
+                {
+                    const s = new Spring(
+                        [cloth[y][x], cloth[y+1][x]],
+                        glm.vec2.fromValues(0,0),
+                        glm.vec2.fromValues(0,0),
+                        stiffness,
+                        spacing
+                    );
+                    this.solver.addForce(s);
+                }
+            }
+        }
+
+        // Shear springs
+        for (let y = 0; y < H - 1; y++)
+        {
+            for (let x = 0; x < W - 1; x++)
+            {
+                const s1 = new Spring(
+                    [cloth[y][x], cloth[y+1][x+1]],
+                    glm.vec2.fromValues(0,0),
+                    glm.vec2.fromValues(0,0),
+                    stiffness,
+                    spacing * 1.4142
+                );
+                this.solver.addForce(s1);
+
+                const s2 = new Spring(
+                    [cloth[y][x+1], cloth[y+1][x]],
+                    glm.vec2.fromValues(0,0),
+                    glm.vec2.fromValues(0,0),
+                    stiffness,
+                    spacing * 1.4142
+                );
+                this.solver.addForce(s2);
+            }
+        }
+
+        // Bend springs
+        for (let y = 0; y < H; y++)
+        {
+            for (let x = 0; x < W; x++)
+            {
+                if (x < W - 2)
+                {
+                    const s = new Spring(
+                        [cloth[y][x], cloth[y][x+2]],
+                        glm.vec2.fromValues(0,0),
+                        glm.vec2.fromValues(0,0),
+                        stiffness * 0.3,
+                        spacing * 2.0
+                    );
+                    this.solver.addForce(s);
+                }
+
+                if (y < H - 2)
+                {
+                    const s = new Spring(
+                        [cloth[y][x], cloth[y+2][x]],
+                        glm.vec2.fromValues(0,0),
+                        glm.vec2.fromValues(0,0),
+                        stiffness * 0.3,
+                        spacing * 2.0
+                    );
+                    this.solver.addForce(s);
+                }
+            }
+        }
+
+        // Pin corners
+        const pinA = glm.vec2.fromValues(-(W - 1) * spacing * 0.5, H * spacing + 8.0);
+        const pinB = glm.vec2.fromValues( (W - 1) * spacing * 0.5, H * spacing + 8.0);
+        const stiff = glm.vec3.fromValues(Infinity, Infinity, 0.0);
+
+        {
+            const j = new Joint(
+                [null, cloth[0][0]],
+                pinA,
+                glm.vec2.fromValues(0,0),
+                stiff
+            );
+            this.solver.addForce(j);
+        }
+
+        {
+            const j = new Joint(
+                [null, cloth[0][W-1]],
+                pinB,
+                glm.vec2.fromValues(0,0),
+                stiff
+            );
+            this.solver.addForce(j);
+        }
     }
 
 }

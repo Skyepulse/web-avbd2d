@@ -10,7 +10,7 @@ import * as glm from 'gl-matrix';
 import type RigidBox from "./RigidBox";
 import Force from "./Force";
 import Manifold, { type ContactRender, type LineRender } from './Manifold';
-import { outerMult, solveLDLT } from '@src/helpers/MathUtils';
+import { outerMat3D, solveLDLT } from '@src/helpers/MathUtils';
 import type GameManager from './GameManager';
 
 const PENALTY_MIN = 1;
@@ -283,7 +283,7 @@ class Solver
 
                         // Accumulate forces (equation 13) and hessian (equation 17)
                         glm.vec3.add(rhs, rhs, glm.vec3.scale(glm.vec3.create(), force.J[j], f));
-                        const outer: glm.mat3 = outerMult(force.J[j], glm.vec3.scale(glm.vec3.create(), force.J[j], force.penalty[j]));
+                        const outer: glm.mat3 = outerMat3D(force.J[j], glm.vec3.scale(glm.vec3.create(), force.J[j], force.penalty[j]));
                         glm.mat3.add(lhs, lhs, outer);
                         glm.mat3.add(lhs, lhs, G);
                     }

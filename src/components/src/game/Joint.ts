@@ -3,6 +3,7 @@ import * as glm from 'gl-matrix';
 import RigidBox from "./RigidBox";
 import type { ContactRender } from "./Manifold";
 import type { LineRender } from "./Manifold";
+import { rotate2D, transform2D } from "@src/helpers/MathUtils";
 
 // ================================== //
 class Joint extends Force
@@ -63,25 +64,8 @@ class Joint extends Force
         
         // Body A is optional, it can be the mouse world position or an anchor in world space
         this.C0 = glm.vec3.fromValues(0, 0, 0);
-        let posA: glm.vec2 = glm.vec2.fromValues(0, 0);
-        let posB: glm.vec2 = glm.vec2.fromValues(0, 0);
-
-        if (this.bodyA) 
-        {
-            // Transform in the way:
-            // bodyA.rotation * rA + bodyA.position
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(posA, this.rA, rotMatrixA);
-            glm.vec2.add(posA, posA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-        } 
-        else
-        {
-            glm.vec2.copy(posA, this.rA);
-        }
-
-        const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-        glm.vec2.transformMat2(posB, this.rB, rotMatrixB);
-        glm.vec2.add(posB, posB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
+        let posA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+        const posB = transform2D(this.bodyB.getPosition(), this.rB);
 
         let deltaPos: glm.vec2 = glm.vec2.subtract(glm.vec2.create(), posA, posB);
         this.C0[0] = deltaPos[0];
@@ -99,25 +83,8 @@ class Joint extends Force
     public computeConstraints(alpha: number): void 
     {
         let Cn: glm.vec3 = glm.vec3.fromValues(0, 0, 0);
-        let posA: glm.vec2 = glm.vec2.fromValues(0, 0);
-        let posB: glm.vec2 = glm.vec2.fromValues(0, 0);
-
-        if (this.bodyA) 
-        {
-            // Transform in the way:
-            // bodyA.rotation * rA + bodyA.position
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(posA, this.rA, rotMatrixA);
-            glm.vec2.add(posA, posA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-        } 
-        else
-        {
-            glm.vec2.copy(posA, this.rA);
-        }
-
-        const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-        glm.vec2.transformMat2(posB, this.rB, rotMatrixB);
-        glm.vec2.add(posB, posB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
+        let posA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+        const posB: glm.vec2 = transform2D(this.bodyB.getPosition(), this.rB);
 
         Cn[0] = posA[0] - posB[0];
         Cn[1] = posA[1] - posB[1];
@@ -140,9 +107,7 @@ class Joint extends Force
     {
         if (body === this.bodyA)
         {
-            let rotatedRA: glm.vec2 = glm.vec2.fromValues(0, 0);
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(rotatedRA, this.rA, rotMatrixA);
+            const rotatedRA = rotate2D(this.rA, this.bodyA.getPosition()[2]);
             this.J[0] =  glm.vec3.fromValues( 1, 0, -rotatedRA[1]);
             this.J[1] =  glm.vec3.fromValues( 0, 1,  rotatedRA[0]);
             this.J[2] =  glm.vec3.fromValues( 0, 0, 1 * this.torqueArm);
@@ -152,9 +117,7 @@ class Joint extends Force
         }
         else if (body === this.bodyB)
         {
-            let rotatedRB: glm.vec2 = glm.vec2.fromValues(0, 0);
-            const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-            glm.vec2.transformMat2(rotatedRB, this.rB, rotMatrixB);
+            const rotatedRB = rotate2D(this.rB, this.bodyB.getPosition()[2]);
             this.J[0] =  glm.vec3.fromValues( -1, 0, rotatedRB[1]);
             this.J[1] =  glm.vec3.fromValues( 0, -1, -rotatedRB[0]);
             this.J[2] =  glm.vec3.fromValues( 0, 0, -1 * this.torqueArm);
@@ -169,23 +132,8 @@ class Joint extends Force
 
         const renders: ContactRender[] = [];
 
-        let worldPosA: glm.vec2 = glm.vec2.fromValues(0, 0);
-        let worldPosB: glm.vec2 = glm.vec2.fromValues(0, 0);
-
-        if (this.bodyA) 
-        {
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(worldPosA, this.rA, rotMatrixA);
-            glm.vec2.add(worldPosA, worldPosA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-        }
-        else
-        {
-            glm.vec2.copy(worldPosA, this.rA);
-        }
-
-        const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-        glm.vec2.transformMat2(worldPosB, this.rB, rotMatrixB);
-        glm.vec2.add(worldPosB, worldPosB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
+        let worldPosA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+        const worldPosB: glm.vec2 = transform2D(this.bodyB.getPosition(), this.rB);
 
         renders.push({pos: worldPosA});
         renders.push({pos: worldPosB});
@@ -197,24 +145,9 @@ class Joint extends Force
     {
         const lines: LineRender[] = [];
 
-        let worldPosA: glm.vec2 = glm.vec2.fromValues(0, 0);
-        let worldPosB: glm.vec2 = glm.vec2.fromValues(0, 0);
-
-        if (this.bodyA) 
-        {
-            const rotMatrixA: glm.mat2 = this.bodyA.getRotationMatrix();
-            glm.vec2.transformMat2(worldPosA, this.rA, rotMatrixA);
-            glm.vec2.add(worldPosA, worldPosA, glm.vec2.fromValues(this.bodyA.getPosition()[0], this.bodyA.getPosition()[1]));
-        }
-        else
-        {
-            glm.vec2.copy(worldPosA, this.rA);
-        }
-
-        const rotMatrixB: glm.mat2 = this.bodyB.getRotationMatrix();
-        glm.vec2.transformMat2(worldPosB, this.rB, rotMatrixB);
-        glm.vec2.add(worldPosB, worldPosB, glm.vec2.fromValues(this.bodyB.getPosition()[0], this.bodyB.getPosition()[1]));
-
+        let worldPosA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);
+        const worldPosB: glm.vec2 = transform2D(this.bodyB.getPosition(), this.rB);
+        
         lines.push({ posA: worldPosA, posB: worldPosB, size: 0.2 });
         return lines;
     }

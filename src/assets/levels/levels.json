@@ -184,6 +184,73 @@
                     }
                 ]
             }
+        },
+        {
+            "LevelID": 6,
+            "LevelName": "Spring Test",
+
+            "Scene": {
+                "Static": [
+                    { "Position": [0, -20], "Rotation": [0], "InitVelocity": [0, 0, 0], "Scale": [100, 5], "Friction": 1.0, "Color": "#FFFFFF" }
+                ],
+                "Dynamic": [
+                    {
+                        "Position": [-20, 10],
+                        "Rotation": [0],
+                        "InitVelocity": [0, 0, 0],
+                        "Scale": [6, 6],
+                        "Friction": 0.0,
+                        "Color": "#FF0000"
+                    },
+                    {
+                        "Position": [-10, 10],
+                        "Rotation": [0],
+                        "InitVelocity": [0, 0, 0],
+                        "Scale": [6, 6],
+                        "Friction": 0.0,
+                        "Color": "#FF0000"
+                    },
+                    {
+                        "Position": [20, 10],
+                        "Rotation": [0],
+                        "InitVelocity": [0, 0, 0],
+                        "Scale": [6, 6],
+                        "Friction": 1.0,
+                        "Color": "#00AAFF"
+                    },
+                    {
+                        "Position": [10, 10],
+                        "Rotation": [0],
+                        "InitVelocity": [0, 0, 0],
+                        "Scale": [6, 6],
+                        "Friction": 1.0,
+                        "Color": "#00AAFF"
+                    }
+                ],
+                "SpringForces": [
+                    {
+                        "bodyAIndex": 1,
+                        "bodyBIndex": 2,
+                        "rA_offset_center": [0, 0],
+                        "rB_offset_center": [0, 0],
+                        "stiffness": 200,
+                        "restLength": 10
+                    },
+                    {
+                        "bodyAIndex": 3,
+                        "bodyBIndex": 4,
+                        "rA_offset_center": [0, 0],
+                        "rB_offset_center": [0, 0],
+                        "stiffness": 200,
+                        "restLength": 10
+                    }
+                ]
+            }
+        },
+        {
+            "LevelID": 7,
+            "LevelName": "Cloth simulation",
+            "hardcoded": true
         }
     ]
 }

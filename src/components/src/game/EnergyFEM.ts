@@ -1,0 +1,79 @@
+// EnergyFEM is supposed to be the counterpart of constraint based forces,
+// we will directly output per vertex (body) the energy derivative into the rhs 
+// and the hessian inside the lhs matrix.
+// We do have to project into PSD the Hessian beforehand to ensure stability.
+
+import * as glm from 'gl-matrix';
+import type RigidBox from './RigidBox';
+
+class EnergyFEM
+{
+    public bodies: RigidBox[] = [];
+    public MAX_ROWS: number = 4; // Arbitrary for now
+
+    public grad_E: glm.vec3[] = []; // VECTOR3 grad_E
+    public hess_E: glm.mat3[] = []; // MATRIX3 hess_E
+
+    // =============== PUBLIC =================== //
+    constructor(bodiesArray: (RigidBox | null)[])
+    {
+        bodiesArray.forEach((body) => {
+            if (body)
+            {
+                this.bodies.push(body);
+                body.energies.push(this);
+            }
+        });
+
+        for (let i = 0; i < this.MAX_ROWS; ++i)
+        {
+            this.grad_E.push(glm.vec3.fromValues(0, 0, 0));
+
+            const m = glm.mat3.create();
+            this.hess_E.push(m);
+        }
+    }
+
+    // ================================== //
+    public getBodies(): RigidBox[]
+    {
+        return this.bodies;
+    }
+
+    // ================================== //
+    public getNumberOfBodies(): number
+    {
+        return this.bodies.length;
+    }
+
+    // ================================ //
+    public getRows(): number
+    {
+        console.warn("This method should not be called directly.");
+        return 0;
+    }
+
+    // ================================== //
+    public computeEnergyTerms(_body: RigidBox): void
+    {
+        console.warn("This method should not be called directly.");
+    }
+    
+    // ================================== //
+    public destroy(): void
+    {
+        this.bodies.forEach((body) => {
+            const index = body.energies.indexOf(this);
+            if (index !== -1) {
+                body.energies.splice(index, 1);
+            }
+        });
+
+        this.bodies.length = 0;
+        this.grad_E.length = 0;
+        this.hess_E.length = 0;
+    }
+}
+
+// ================================ //
+export default EnergyFEM;

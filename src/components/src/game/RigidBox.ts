@@ -7,6 +7,7 @@
 
 import * as glm from 'gl-matrix';
 import Force from './Force';
+import EnergyFEM from './EnergyFEM';
 
 //================================//
 class RigidBox 
@@ -35,6 +36,7 @@ class RigidBox
     public id = -1;
 
     public forces: Force[] = [];
+    public energies: EnergyFEM[] = [];
 
     public isDragged: boolean = false;
     public addedDragVelocity: glm.vec3 = glm.vec3.fromValues(0, 0, 0);
@@ -109,6 +111,14 @@ class RigidBox
         {
             const f = this.forces[i];
             const possibleBodies = f.getBodies();
+            if (possibleBodies.indexOf(body) !== -1)
+                return true;
+        }
+
+        for (let i = 0; i < this.energies.length; ++i)
+        {
+            const e = this.energies[i];
+            const possibleBodies = e.getBodies();
             if (possibleBodies.indexOf(body) !== -1)
                 return true;
         }

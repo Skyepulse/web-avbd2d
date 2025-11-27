@@ -157,7 +157,7 @@
       return out;
   }
 
-    //================================//
+  //================================//
   export function outerMat3D(a: glm.vec3, b: glm.vec3): glm.mat3
   {
     const out = glm.mat3.create();
@@ -165,4 +165,15 @@
     out[1] = a[1] * b[0]; out[4] = a[1] * b[1]; out[7] = a[1] * b[2];
     out[2] = a[2] * b[0]; out[5] = a[2] * b[1]; out[8] = a[2] * b[2];
     return out;
+  }
+
+  // ================================== //
+  export function outerMat4D(a: glm.vec4, b: glm.vec4): glm.mat4
+  {
+      const out: glm.mat4 = glm.mat4.create();
+      out[0]  = a[0] * b[0]; out[4]  = a[0] * b[1]; out[8]  = a[0] * b[2]; out[12] = a[0] * b[3];
+      out[1]  = a[1] * b[0]; out[5]  = a[1] * b[1]; out[9]  = a[1] * b[2]; out[13] = a[1] * b[3];
+      out[2]  = a[2] * b[0]; out[6]  = a[2] * b[1]; out[10] = a[2] * b[2]; out[14] = a[2] * b[3];
+      out[3]  = a[3] * b[0]; out[7]  = a[3] * b[1]; out[11] = a[3] * b[2]; out[15] = a[3] * b[3];
+      return out;
   }

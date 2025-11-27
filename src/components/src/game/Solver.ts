@@ -12,6 +12,7 @@ import Force from "./Force";
 import Manifold, { type ContactRender, type LineRender } from './Manifold';
 import { outerMat3D, solveLDLT } from '@src/helpers/MathUtils';
 import type GameManager from './GameManager';
+import type EnergyFEM from './EnergyFEM';
 
 const PENALTY_MIN = 1;
 const PENALTY_MAX = 1000000000;
@@ -31,6 +32,7 @@ class Solver
 
     public bodies: RigidBox[] = [];
     public forces: Force[] = [];
+    public energies: EnergyFEM[] = [];
 
     public contactsToRender: ContactRender[] = [];
     public contactLinesToRender: LineRender[] = [];
@@ -54,13 +56,19 @@ class Solver
     public Clear(): void {
         const forcesToDestroy = [...this.forces];
         const bodiesToDestroy = [...this.bodies];
+        const energiesToDestroy = [...this.energies];
         
         this.forces.length = 0;
         this.bodies.length = 0;
+        this.energies.length = 0;
         this.contactsToRender = [];
         
         for (const f of forcesToDestroy) {
             f.destroy();
+        }
+
+        for (const e of energiesToDestroy) {
+            e.destroy();
         }
         
         for (const b of bodiesToDestroy) {
@@ -274,6 +282,7 @@ class Solver
                         if (f < force.fmin[j]) f = force.fmin[j];
                         if (f > force.fmax[j]) f = force.fmax[j];
 
+                        // Build diagonal G matrix for Hessian regularization
                         const G: glm.mat3 = glm.mat3.fromValues(
                             glm.vec3.length(glm.vec3.fromValues(force.H[j][0], force.H[j][3], force.H[j][6])), 0, 0,
                             0, glm.vec3.length(glm.vec3.fromValues(force.H[j][1], force.H[j][4], force.H[j][7])), 0,
@@ -286,6 +295,19 @@ class Solver
                         const outer: glm.mat3 = outerMat3D(force.J[j], glm.vec3.scale(glm.vec3.create(), force.J[j], force.penalty[j]));
                         glm.mat3.add(lhs, lhs, outer);
                         glm.mat3.add(lhs, lhs, G);
+                    }
+                }
+
+                for (const energy of body.energies)
+                {
+                    energy.computeEnergyTerms(body);
+
+                    const rows = energy.getRows();
+                    for (let j = 0; j < rows; ++j)
+                    {
+                        // Accumulate gradient
+                        glm.vec3.add(rhs, rhs, energy.grad_E[j]);
+                        glm.mat3.add(lhs, lhs, energy.hess_E[j]);
                     }
                 }
 

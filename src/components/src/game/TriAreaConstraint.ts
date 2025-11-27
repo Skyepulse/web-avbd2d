@@ -125,12 +125,14 @@ class TriAreaConstraint extends Force
     }
 
     // ================================== //
-    public getContactRenders(): ContactRender[] {
+    public getContactRenders(): ContactRender[] 
+    {
         return [];
     }
 
     // ================================== //
-    public getLineRenders(): LineRender[] {
+    public getContactLines(): LineRender[] 
+    {
         return [];
     }
 }

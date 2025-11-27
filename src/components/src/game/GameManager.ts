@@ -16,6 +16,7 @@ import Joint from './Joint';
 import Spring from './Spring';
 import { createParticle } from '@src/helpers/Others';
 import TriAreaConstraint from './TriAreaConstraint';
+import NeoHookianEnergy from './NeoHookianEnergy';
 
 // ================================== //
 export interface performanceInformation
@@ -703,6 +704,15 @@ class GameManager
         window.addEventListener('keydown', this.windowRestart);
     }
 
+    // ================================== //
+    private makeParticle(x: number, y: number, mass: number, color: string)
+    {
+        const p = createParticle(glm.vec2.fromValues(x, y), mass, color);
+        p.id = this.gameRenderer.addInstanceBox(p);
+        this.solver.addRigidBox(p);
+        return p;
+    };
+
     // =============== HARDCODED LEVELS =================== //
     public loadHardcodedLevel7(): void
     {
@@ -723,10 +733,7 @@ class GameManager
                 const px = (x - W * 0.5) * spacing;
                 const py = (H - y) * spacing + 8.0;
 
-                const p = createParticle(glm.vec2.fromValues(px, py), mass, "#ffffff");
-                p.id = this.gameRenderer.addInstanceBox(p);
-                this.solver.addRigidBox(p);
-
+                const p = this.makeParticle(px, py, mass, "#ffffff");
                 cloth[y][x] = p;
             }
         }
@@ -851,21 +858,14 @@ class GameManager
         const color = "#ffffff";
         const k_edge = 200.0;
         const k_area = 500.0;
-
-        // Helper to create a particle
-        const makeParticle = (x: number, y: number) => {
-            const p = createParticle(glm.vec2.fromValues(x, y), mass, color);
-            p.id = this.gameRenderer.addInstanceBox(p);
-            this.solver.addRigidBox(p);
-            return p;
-        };
+        
 
         //
         // LEFT TRIANGLE — SPRINGS ONLY
         //
-        const L_A = makeParticle(-10, 5);
-        const L_B = makeParticle(-13, 0);
-        const L_C = makeParticle( -7, 0);
+        const L_A = this.makeParticle(-10, 5, mass, color);
+        const L_B = this.makeParticle(-13, 0, mass, color);
+        const L_C = this.makeParticle( -7, 0, mass, color);
 
         // Edges
         const connectSpring = (p1: RigidBox, p2: RigidBox) => {
@@ -887,9 +887,9 @@ class GameManager
         //
         // RIGHT TRIANGLE — SPRINGS + AREA CONSTRAINT
         //
-        const R_A = makeParticle(10, 5);
-        const R_B = makeParticle(7, 0);
-        const R_C = makeParticle(13, 0);
+        const R_A = this.makeParticle(10, 5, mass, color);
+        const R_B = this.makeParticle(7, 0, mass, color);
+        const R_C = this.makeParticle(13, 0, mass, color);
 
         connectSpring(R_A, R_B);
         connectSpring(R_B, R_C);
@@ -935,14 +935,6 @@ class GameManager
         const SPRING_MEDIUM = 250.0;
         const SPRING_STRONG = 1000.0;
 
-        // Helper to create a particle
-        const makeP = (x: number, y: number): RigidBox => {
-            const p = createParticle(glm.vec2.fromValues(x, y), mass, color);
-            p.id = this.gameRenderer.addInstanceBox(p);
-            this.solver.addRigidBox(p);
-            return p;
-        };
-
         const addSpring = (A: RigidBox, B: RigidBox, k: number) => {
             const rest = glm.vec2.distance(A.getPos2(), B.getPos2());
             this.solver.addForce(
@@ -972,15 +964,17 @@ class GameManager
         {
             const R = 3.5;
 
-            const C = makeP(cx, cy); // center
+            const C = this.makeParticle(cx, cy, mass, color); // center
 
             const ring: RigidBox[] = [];
             for (let i = 0; i < 6; i++)
             {
                 const a = (Math.PI * 2 / 6) * i;
-                ring.push(makeP(
+                ring.push(this.makeParticle(
                     cx + R * Math.cos(a),
-                    cy + R * Math.sin(a)
+                    cy + R * Math.sin(a),
+                    mass,
+                    color
                 ));
             }
 
@@ -1020,6 +1014,35 @@ class GameManager
             0.0,
             1.0,
             glm.vec3.fromValues(0, -6, 0),
+            glm.vec3.fromValues(0, 0, 0)
+        );
+        floor.id = this.gameRenderer.addInstanceBox(floor);
+        this.solver.addRigidBox(floor);
+    }
+
+    public loadHardcodedLevel10(): void
+    {
+        const mass = 1.0;
+        const color = "#ffffff";
+
+        // A=top, B=bottom-left, C=bottom-right
+        const A = this.makeParticle(0.0, 4.0, mass, color);
+        const B = this.makeParticle(-2.5, 0.0, mass, color);
+        const C = this.makeParticle( 2.5, 0.0, mass, color);
+
+        const mu     = 8000;
+        const lambda = 8000;
+
+        const fem = new NeoHookianEnergy([A, B, C], mu, lambda);
+        this.solver.addEnergy(fem);
+
+        // Static floor
+        const floor = new RigidBox(
+            glm.vec2.fromValues(50, 2),
+            new Uint8Array([200,200,200,255]),
+            0.0,              // density = 0 => static
+            1.0,
+            glm.vec3.fromValues(0, -5, 0),
             glm.vec3.fromValues(0, 0, 0)
         );
         floor.id = this.gameRenderer.addInstanceBox(floor);

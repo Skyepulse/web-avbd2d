@@ -261,6 +261,11 @@
             "LevelID": 9,
             "LevelName": "Soft Body Simulation",
             "hardcoded": true
+        },
+        {
+            "LevelID": 10,
+            "LevelName": "Neo-Hookian FEM",
+            "hardcoded": true
         }
     ]
 }

@@ -416,12 +416,28 @@ class Solver
     }
 
     // ================================== //
+    public addEnergy(energy: EnergyFEM): void
+    {
+        if (this.energies.indexOf(energy) === -1)
+            this.energies.push(energy);
+    }
+
+    // ================================== //
     public removeForce(force: Force): void
     {
         const index = this.forces.indexOf(force);
         if (index !== -1)
             this.forces.splice(index, 1);
         force.destroy();
+    }
+
+    // ================================== //
+    public removeEnergy(energy: EnergyFEM): void
+    {
+        const index = this.energies.indexOf(energy);
+        if (index !== -1)
+            this.energies.splice(index, 1);
+        energy.destroy();
     }
 }
 

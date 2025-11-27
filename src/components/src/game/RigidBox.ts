@@ -39,6 +39,8 @@ class RigidBox
     public isDragged: boolean = false;
     public addedDragVelocity: glm.vec3 = glm.vec3.fromValues(0, 0, 0);
 
+    public isParticle: boolean = false;
+
     //=============== PUBLIC =================//
     constructor(scale: glm.vec2, color: Uint8Array, density: number, friction: number, position: glm.vec3, velocity: glm.vec3)
     {
@@ -89,7 +91,13 @@ class RigidBox
     }
 
     //================================//
-    public setPosition(position: glm.vec3): void { this.position = position; }
+    public setPosition(position: glm.vec3): void 
+    { 
+        this.position = position; 
+
+        if (this.isParticle)
+            this.position[2] = 0; // Particles do not rotate
+    }
 
     //================================//
     public setColor(color: Uint8Array): void { this.color = color; }

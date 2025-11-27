@@ -15,6 +15,7 @@ import { useLevels, type GObject } from '@src/helpers/Levels';
 import Joint from './Joint';
 import Spring from './Spring';
 import { createParticle } from '@src/helpers/Others';
+import TriAreaConstraint from './TriAreaConstraint';
 
 // ================================== //
 export interface performanceInformation
@@ -843,6 +844,187 @@ class GameManager
         }
     }
 
+    // ================================== //
+    public loadHardcodedLevel8(): void
+    {
+        const mass = 1.0;
+        const color = "#ffffff";
+        const k_edge = 200.0;
+        const k_area = 500.0;
+
+        // Helper to create a particle
+        const makeParticle = (x: number, y: number) => {
+            const p = createParticle(glm.vec2.fromValues(x, y), mass, color);
+            p.id = this.gameRenderer.addInstanceBox(p);
+            this.solver.addRigidBox(p);
+            return p;
+        };
+
+        //
+        // LEFT TRIANGLE — SPRINGS ONLY
+        //
+        const L_A = makeParticle(-10, 5);
+        const L_B = makeParticle(-13, 0);
+        const L_C = makeParticle( -7, 0);
+
+        // Edges
+        const connectSpring = (p1: RigidBox, p2: RigidBox) => {
+            const rest = glm.vec2.distance(p1.getPos2(), p2.getPos2());
+            const s = new Spring(
+                [p1, p2],
+                glm.vec2.fromValues(0,0),
+                glm.vec2.fromValues(0,0),
+                k_edge,
+                rest
+            );
+            this.solver.addForce(s);
+        };
+
+        connectSpring(L_A, L_B);
+        connectSpring(L_B, L_C);
+        connectSpring(L_C, L_A);
+
+        //
+        // RIGHT TRIANGLE — SPRINGS + AREA CONSTRAINT
+        //
+        const R_A = makeParticle(10, 5);
+        const R_B = makeParticle(7, 0);
+        const R_C = makeParticle(13, 0);
+
+        connectSpring(R_A, R_B);
+        connectSpring(R_B, R_C);
+        connectSpring(R_C, R_A);
+
+        // Area preservation constraint
+        {
+            const areaC = new TriAreaConstraint(
+                [R_A, R_B, R_C],
+                glm.vec2.fromValues(0,0),
+                glm.vec2.fromValues(0,0),
+                glm.vec2.fromValues(0,0),
+                k_area
+            );
+            this.solver.addForce(areaC);
+        }
+
+        const floor = new RigidBox(
+            glm.vec2.fromValues(50, 2),
+            new Uint8Array([200,200,200,255]),
+            0.0,              // density = 0 => static
+            1.0,
+            glm.vec3.fromValues(0, -5, 0),
+            glm.vec3.fromValues(0, 0, 0)
+        );
+        floor.id = this.gameRenderer.addInstanceBox(floor);
+        this.solver.addRigidBox(floor);
+    }
+
+    // ================================== //
+    public loadHardcodedLevel9(): void
+    {
+        const mass = 1.0;
+        const color = "#ffffff";
+
+        // Three different area stiffness values
+        const AREA_WEAK   = 100.0;
+        const AREA_MEDIUM = 1000.0;
+        const AREA_STRONG = 10000.0;
+
+        // Three different spring stiffness values
+        const SPRING_WEAK   = 50.0;
+        const SPRING_MEDIUM = 250.0;
+        const SPRING_STRONG = 1000.0;
+
+        // Helper to create a particle
+        const makeP = (x: number, y: number): RigidBox => {
+            const p = createParticle(glm.vec2.fromValues(x, y), mass, color);
+            p.id = this.gameRenderer.addInstanceBox(p);
+            this.solver.addRigidBox(p);
+            return p;
+        };
+
+        const addSpring = (A: RigidBox, B: RigidBox, k: number) => {
+            const rest = glm.vec2.distance(A.getPos2(), B.getPos2());
+            this.solver.addForce(
+                new Spring([A,B],
+                    glm.vec2.fromValues(0,0),
+                    glm.vec2.fromValues(0,0),
+                    k,
+                    rest)
+            );
+        };
+
+        const addArea = (A: RigidBox, B: RigidBox, C: RigidBox, k: number) => {
+            this.solver.addForce(
+                new TriAreaConstraint(
+                    [A,B,C],
+                    glm.vec2.fromValues(0,0),
+                    glm.vec2.fromValues(0,0),
+                    glm.vec2.fromValues(0,0),
+                    k)
+            );
+        };
+
+        //
+        // FACTORY: create one soft hex body at (cx, cy) with given area stiffness
+        //
+        const createHexSoftBody = (cx: number, cy: number, k_area: number, k_spring: number) =>
+        {
+            const R = 3.5;
+
+            const C = makeP(cx, cy); // center
+
+            const ring: RigidBox[] = [];
+            for (let i = 0; i < 6; i++)
+            {
+                const a = (Math.PI * 2 / 6) * i;
+                ring.push(makeP(
+                    cx + R * Math.cos(a),
+                    cy + R * Math.sin(a)
+                ));
+            }
+
+            // Springs
+            for (let i = 0; i < 6; i++)
+                addSpring(C, ring[i], k_spring);     // center to ring
+
+            for (let i = 0; i < 6; i++)
+                addSpring(ring[i], ring[(i+1)%6], k_spring); // ring edges
+
+            for (let i = 0; i < 6; i++)
+                addSpring(ring[i], ring[(i+2)%6], k_spring); // diagonals (extra stiffness)
+
+            // Area constraints
+            for (let i = 0; i < 6; i++)
+                addArea(C, ring[i], ring[(i+1)%6], k_area); // center fan
+
+            for (let i = 0; i < 6; i++)
+                addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6], k_area); // outer triangles
+        };
+
+
+        //
+        // CREATE THREE SIDE-BY-SIDE BODIES
+        //
+        createHexSoftBody(-12, 6, AREA_WEAK, SPRING_WEAK);     // left
+        createHexSoftBody(  0, 6, AREA_MEDIUM, SPRING_MEDIUM);   // center
+        createHexSoftBody( 12, 6, AREA_STRONG, SPRING_STRONG);   // right
+
+
+        //
+        // STATIC FLOOR
+        //
+        const floor = new RigidBox(
+            glm.vec2.fromValues(60, 2),
+            new Uint8Array([200,200,200,255]),
+            0.0,
+            1.0,
+            glm.vec3.fromValues(0, -6, 0),
+            glm.vec3.fromValues(0, 0, 0)
+        );
+        floor.id = this.gameRenderer.addInstanceBox(floor);
+        this.solver.addRigidBox(floor);
+    }
 }
 
 //================================//

@@ -29,5 +29,8 @@ export function createParticle(position: vec2, mass: number, color: string): Rig
     const position3D: vec3 = vec3.fromValues(position[0], position[1], 0);
     const velocity: vec3 = vec3.fromValues(0, 0, 0);
 
-    return new RigidBox(size, colorArr, density, friction, position3D, velocity);
+    const box = new RigidBox(size, colorArr, density, friction, position3D, velocity);
+    box.isParticle = true;
+
+    return box;
 }

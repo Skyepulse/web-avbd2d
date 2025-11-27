@@ -251,6 +251,16 @@
             "LevelID": 7,
             "LevelName": "Cloth simulation",
             "hardcoded": true
+        },
+        {
+            "LevelID": 8,
+            "LevelName": "Triangle Area Preservation",
+            "hardcoded": true
+        },
+        {
+            "LevelID": 9,
+            "LevelName": "Soft Body Simulation",
+            "hardcoded": true
         }
     ]
 }

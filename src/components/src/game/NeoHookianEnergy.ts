@@ -1,4 +1,4 @@
-import { outerMat4D } from "@src/helpers/MathUtils";
+import { scale2D } from "@src/helpers/MathUtils";
 import EnergyFEM from "./EnergyFEM";
 import type RigidBox from "./RigidBox";
 import * as glm from "gl-matrix";
@@ -18,6 +18,7 @@ class NeoHookianEnergy extends EnergyFEM
     private DmInverse: glm.mat2 = glm.mat2.create(); // Inverse of rest shape matrix
 
     // used for per body gradient computations
+    // These represent the column vectors of DmInverse, corresponding to gradients of shape functions
     private gradN0: glm.vec2 = glm.vec2.create();
     private gradN1: glm.vec2 = glm.vec2.create();
     private gradN2: glm.vec2 = glm.vec2.create();
@@ -63,6 +64,10 @@ class NeoHookianEnergy extends EnergyFEM
 
         // Compute rest area
         this.restArea = 0.5 * glm.mat2.determinant(this.Dm);
+        if (this.restArea < 1e-9) 
+        {
+            console.warn("NeoHookianEnergy: Rest area is very small or zero. This element might be degenerate.");
+        }
 
         // Derivative gradient helpers
         const dmInvT = glm.mat2.transpose(glm.mat2.create(), this.DmInverse);
@@ -70,6 +75,8 @@ class NeoHookianEnergy extends EnergyFEM
         this.gradN1 = glm.vec2.fromValues(dmInvT[0], dmInvT[1]);
         this.gradN2 = glm.vec2.fromValues(dmInvT[2], dmInvT[3]);
 
+        // For barycentric coordinates, N0 + N1 + N2 = 1, so grad(N0) + grad(N1) + grad(N2) = 0
+        // Therefore, gradN0 = -(gradN1 + gradN2)   
         this.gradN0 = glm.vec2.create();
         glm.vec2.scaleAndAdd(this.gradN0, this.gradN1, this.gradN2, -1);
     }
@@ -107,145 +114,60 @@ class NeoHookianEnergy extends EnergyFEM
         }
 
         const J: number = glm.mat2.determinant(F);
+        if (J <= 0) 
+        {
+            console.error("NeoHookianEnergy: Inverted element detected (J <= 0). Cannot reliably compute gradient.");
+            return;
+        }
+
         const a: number = 1 + this.lameMu / this.lameLambda;
 
-        // TO COMPUTE DERIVATIVES:
-        // E = μ/2 (I1 - 2) + λ/2 (J - a)^2
-        // first Piola P = μ F + λ (J - a)*J*F^{-T}
-        const P : glm.mat2 = glm.mat2.create();
-        const fact1: glm.mat2 = glm.mat2.create();
-        const fact2: glm.mat2 = glm.mat2.create();
+        const FtF: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ft, F);
+        const I1: number = FtF[0] + FtF[3];
 
-        glm.mat2.multiplyScalar(fact1, F, this.lameMu);
+        // In order to compute the force, we derive by position the energy using the chain rule:
+        // dE/dx = dE/dF * dF/dx
 
-        const scale = this.lameLambda * (J - a) * J;
-        glm.mat2.multiplyScalar(fact2, invFt, scale);
-        glm.mat2.add(P, fact1, fact2);
+        // 1. Calculate ∂E/∂F (First Piola-Kirchhoff Stress Tensor, P)
+        // P = ∂E/∂F = mu * F - 2 * lambda * (J - a) * J * F^-T
+        const dEdF: glm.mat2 = glm.mat2.create();
 
-        const fi = glm.vec2.create();
+        // We know dI1/dF = 2F, since I1 = trace(F^T F)
+        // We know dJ/dF = det(F) * F^-T = J * F^-T
+        const t1 = scale2D(F, this.lameMu);
+        const t2 = scale2D(invFt, -2 * this.lameLambda * (J - a) * J);
+        glm.mat2.add(dEdF, t1, t2);
+
+        // 2. Now we can compute dF/dx and then dE/dx
+        // Typically grad_body_i = A0 * P * grad_Ni
         switch (body)
         {
             case this.bodyA:
-                glm.vec2.transformMat2(fi, this.gradN0, P); // P * gradN0
+                const gradVecA = glm.vec2.create();
+                glm.vec2.transformMat2(gradVecA, this.gradN0, dEdF);
+                this.grad_E[0][0] = this.restArea * gradVecA[0];
+                this.grad_E[0][1] = this.restArea * gradVecA[1];
+                this.grad_E[0][2] = 0;
                 break;
-            
             case this.bodyB:
-                glm.vec2.transformMat2(fi, this.gradN1, P);
-
+                const gradVecB = glm.vec2.create();
+                glm.vec2.transformMat2(gradVecB, this.gradN1, dEdF);
+                this.grad_E[0][0] = this.restArea * gradVecB[0];
+                this.grad_E[0][1] = this.restArea * gradVecB[1];
+                this.grad_E[0][2] = 0;
                 break;
-            
+
             case this.bodyC:
-                glm.vec2.transformMat2(fi, this.gradN2, P);
+                const gradVecC = glm.vec2.create();
+                glm.vec2.transformMat2(gradVecC, this.gradN2, dEdF);
+                this.grad_E[0][0] = this.restArea * gradVecC[0];
+                this.grad_E[0][1] = this.restArea * gradVecC[1];
+                this.grad_E[0][2] = 0;
                 break;
-
-            default:
-                return;
         }
 
-        glm.vec2.scale(fi, fi, -this.restArea);
-        this.grad_E[0] = glm.vec3.fromValues(fi[0], fi[1], 0);
-
-        // hessian = dE^2/dF^2
-        // H = mu H1 + lambda H2
-        // H1 = mu * d(trace(F^T F))/dF^2
-        // H2 = lambda * d( (J - a)^2 )/dF^2
-        // 
-        //  H1 = mu * I (4th order identity)
-        //  because J = f0 f3 - f1 f2
-        // dJ/dF = [ f3  -f2 ]
-        //         [ -f1  f0 ]
-        //
-        // d2J/dF2 = [ 0    0   0   1 ]
-        //           [ 0    0  -1   0 ]
-        //           [ 0   -1   0   0 ]
-        //           [ 1    0   0   0 ]
-        //
-        // H2 = lambda * ( (dJ/dF) ⊗ (dJ/dF) + (J - a) * d2J/dF2 )
-        const H = glm.mat4.create();
-
-        const H1 = glm.mat4.identity(glm.mat4.create());
-        glm.mat4.multiplyScalar(H1, H1, this.lameMu);
-
-        const dJ_dF = glm.vec4.fromValues(
-            F[3], -F[2],
-            -F[1], F[0]
-        );
-
-        const outer: glm.mat4 = outerMat4D(dJ_dF, dJ_dF);
-        const HJ = glm.mat4.fromValues(
-            0, 0, 0, 1,
-            0, 0, -1, 0,
-            0, -1, 0, 0,
-            1, 0, 0, 0
-        );
-
-        const H2 = glm.mat4.create();
-        glm.mat4.multiplyScalar(H2, outer, this.lameLambda);
-        const HJ_scaled = glm.mat4.create();
-        glm.mat4.multiplyScalar(HJ_scaled, HJ, this.lameLambda * (J - a));
-        glm.mat4.add(H2, H2, HJ_scaled);
-
-        // Combine H1 and H2 into H
-        glm.mat4.add(H, H1 as unknown as glm.mat4, H2);
-
-        // Transform into per body hessian 3x3
-        // Convert H(F) (4x4) → Hessian wrt vertex displacements (2x2)
-
-        const makeGi = (g: glm.vec2): glm.mat4 => {
-            const Gi = glm.mat4.create();
-
-            // vec(F) ordering: [F00, F10, F01, F11]
-
-            // Column 0 (dx)
-            Gi[0]  = g[0];   // F00 += dx * gx
-            Gi[1]  = g[1];   // F10 += dx * gy
-            Gi[2]  = 0;
-            Gi[3]  = 0;
-
-            // Column 1 (dy)
-            Gi[4]  = 0;
-            Gi[5]  = 0;
-            Gi[6]  = g[0];   // F01 += dy * gx
-            Gi[7]  = g[1];   // F11 += dy * gy
-
-            return Gi;
-        };
-
-        let g;
-        if (body === this.bodyA) g = this.gradN0;
-        else if (body === this.bodyB) g = this.gradN1;
-        else if (body === this.bodyC) g = this.gradN2;
-        else return;
-
-        const Gi = makeGi(g);
-        const GiT = glm.mat4.transpose(glm.mat4.create(), Gi); // 2×4
-
-        // temp = H_F * Gi
-        const temp = glm.mat4.multiply(glm.mat4.create(), H, Gi); // (4×4)*(4×2) = 4×2
-
-        const Hi = glm.mat2.create();
-        {
-            const M = glm.mat2.create();
-
-            for (let r = 0; r < 2; ++r) {
-                for (let c = 0; c < 2; ++c) {
-                    let sum = 0;
-                    for (let k = 0; k < 4; ++k) {
-                        sum += GiT[r*4 + k] * temp[k*2 + c];
-                    }
-                    M[r*2 + c] = sum;
-                }
-            }
-
-            glm.mat2.multiplyScalar(Hi, M, this.restArea);
-        }
-
-        // Embed 2×2 into your 3×3 body Hessian
-        this.hess_E[0] = glm.mat3.fromValues(
-            Hi[0], Hi[1], 0,
-            Hi[2], Hi[3], 0,
-            0,     0,     0
-        );
+        // NOW compute the hessian
+        
     }
 }
 

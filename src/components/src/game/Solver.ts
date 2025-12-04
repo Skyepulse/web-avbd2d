@@ -87,6 +87,8 @@ class Solver
     //================================//
     public setGravity(newGravity: glm.vec2): void
     {
+        if (glm.vec2.length(newGravity) == 0.0)
+            newGravity = glm.vec2.fromValues(0, 0.000001);
         this.gravity = newGravity;
     }
 
@@ -305,9 +307,9 @@ class Solver
                     const rows = energy.getRows();
                     for (let j = 0; j < rows; ++j)
                     {
-                        // Accumulate gradient
-                        glm.vec3.add(rhs, rhs, energy.grad_E[j]);
-                        glm.mat3.add(lhs, lhs, energy.hess_E[j]);
+                        // Accumulate gradients
+
+                        
                     }
                 }
 

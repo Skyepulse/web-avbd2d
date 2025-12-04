@@ -46,6 +46,8 @@ class Solver
 
     private gameManager: GameManager;
 
+    private urgentStop: boolean = false;
+
     // ================================== //
     constructor(gameManager: GameManager)
     {
@@ -82,6 +84,8 @@ class Solver
         this.perfStepCount = 0;
         this.perfStepAcc = 0;
         this.perfIntervalStart = performance.now();
+
+        this.urgentStop = false;
     }
 
     //================================//
@@ -141,6 +145,8 @@ class Solver
     //================================//
     public step(dt: number): void
     {
+        if (this.urgentStop) return;
+
         const stepStart = performance.now();
         if (Math.abs(dt - this.dt) > 0.01)
             this.gameManager.logWarn(`Warning: Physics timestep changed from ${this.dt} to ${dt}. This may cause instability.`);
@@ -302,14 +308,23 @@ class Solver
 
                 for (const energy of body.energies)
                 {
+                    console.log('hi');
                     energy.computeEnergyTerms(body);
 
                     const rows = energy.getRows();
                     for (let j = 0; j < rows; ++j)
                     {
-                        // Accumulate gradients
-
-                        
+                        // force magnitude
+                        const mag: number = glm.vec3.length(energy.grad_E[j]);
+                        if (isNaN(mag))
+                        {
+                            this.urgentStop = true;
+                            this.gameManager.logWarn("NaN detected in energy gradient, stopping simulation to prevent instability.");
+                            return;
+                        }
+                        this.gameManager.log(`Energy gradient magnitude: ${mag}`);
+                        glm.vec3.sub(rhs, rhs, energy.grad_E[j]);
+                        glm.mat3.add(lhs, lhs, energy.hess_E[j]);
                     }
                 }
 

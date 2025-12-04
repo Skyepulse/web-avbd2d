@@ -1030,8 +1030,8 @@ class GameManager
         const B = this.makeParticle(-2.5, 0.0, mass, color);
         const C = this.makeParticle( 2.5, 0.0, mass, color);
 
-        const mu     = 8000;
-        const lambda = 8000;
+        const mu     = 36;
+        const lambda = 67;
 
         const fem = new NeoHookianEnergy([A, B, C], mu, lambda);
         this.solver.addEnergy(fem);

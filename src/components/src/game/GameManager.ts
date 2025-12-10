@@ -59,8 +59,8 @@ class GameManager
     private onMouseUp?: (e: MouseEvent) => void;
 
     private onZoom?: (e: WheelEvent) => void;
-
     private windowRestart?: (e: KeyboardEvent) => void;
+    private onPauseToggle?: (e: KeyboardEvent) => void;
 
     private ParsedLevels = useLevels().parsedLevels;
 
@@ -134,6 +134,11 @@ class GameManager
             this.onZoom = undefined;
         }
 
+        if (this.onPauseToggle) {
+            window.removeEventListener("keydown", this.onPauseToggle);
+            this.onPauseToggle = undefined;
+        }
+
         await this.gameRenderer.cleanup();
     }
 
@@ -162,6 +167,16 @@ class GameManager
         if (this.windowRestart) {
             window.removeEventListener("keydown", this.windowRestart);
             this.windowRestart = undefined;
+        }
+
+        if (this.onZoom) {
+            this.canvas.removeEventListener("wheel", this.onZoom);
+            this.onZoom = undefined;
+        }
+
+        if (this.onPauseToggle) {
+            window.removeEventListener("keydown", this.onPauseToggle);
+            this.onPauseToggle = undefined;
         }
 
         this.gameRenderer.reset();
@@ -703,6 +718,13 @@ class GameManager
             }
         };
         window.addEventListener('keydown', this.windowRestart);
+
+        this.onPauseToggle = (event: KeyboardEvent) => {
+            if (event.key === 'p' || event.key === 'P') {
+                this.solver.paused = this.solver.paused ? false : true;
+            }
+        };
+        window.addEventListener('keydown', this.onPauseToggle);
     }
 
     // ================================== //

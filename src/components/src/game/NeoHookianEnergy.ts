@@ -54,16 +54,16 @@ class NeoHookianEnergy extends EnergyFEM
         const edge1 = glm.vec2.fromValues(pB[0] - pA[0], pB[1] - pA[1]);
         const edge2 = glm.vec2.fromValues(pC[0] - pA[0], pC[1] - pA[1]);
 
-        glm.mat2.set(this.Dm,
-            edge1[0], edge2[0],
-            edge1[1], edge2[1]
+        this.Dm = glm.mat2.fromValues(
+            edge1[0], edge1[1],
+            edge2[0], edge2[1]
         );
 
         // Compute inverse of Dm
         glm.mat2.invert(this.DmInverse, this.Dm);
 
         // Compute rest area
-        this.restArea = 0.5 * glm.mat2.determinant(this.Dm);
+        this.restArea = 0.5 * Math.abs(glm.mat2.determinant(this.Dm));
         if (this.restArea < 1e-9) 
         {
             console.warn("NeoHookianEnergy: Rest area is very small or zero. This element might be degenerate.");
@@ -95,10 +95,9 @@ class NeoHookianEnergy extends EnergyFEM
         const edge1 = glm.vec2.fromValues(pB[0] - pA[0], pB[1] - pA[1]);
         const edge2 = glm.vec2.fromValues(pC[0] - pA[0], pC[1] - pA[1]);
 
-        const Ds = glm.mat2.create();
-        glm.mat2.set(Ds,
-            edge1[0], edge2[0],
-            edge1[1], edge2[1]
+        const Ds = glm.mat2.fromValues(
+            edge1[0], edge1[1],
+            edge2[0], edge2[1]
         );
 
         const F: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
@@ -114,7 +113,7 @@ class NeoHookianEnergy extends EnergyFEM
         const J: number = glm.mat2.determinant(F);
         const rest: number = 1 - J;
 
-        if (Math.abs(rest) < 1e-4)
+        if (Math.abs(rest) < 1e-16)
         {
             // Set gradient and hessian to zero
             this.grad_E[0] = glm.vec3.fromValues(0, 0, 0);

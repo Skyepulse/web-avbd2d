@@ -51,6 +51,8 @@ class Solver
     private urgentStop: boolean = false;
     private currentSteps: number = 0;
 
+    public paused: boolean = false;
+
     // ================================== //
     constructor(gameManager: GameManager)
     {
@@ -149,6 +151,7 @@ class Solver
     public step(dt: number): void
     {
         if (this.urgentStop) return;
+        if (this.paused) return;
 
         if (MAX_STEPS > 0 && this.currentSteps > MAX_STEPS) 
         {

@@ -17,6 +17,8 @@ import type EnergyFEM from './EnergyFEM';
 const PENALTY_MIN = 1;
 const PENALTY_MAX = 1000000000;
 
+const MAX_STEPS = -100;
+
 //================================//
 class Solver
 {
@@ -47,6 +49,7 @@ class Solver
     private gameManager: GameManager;
 
     private urgentStop: boolean = false;
+    private currentSteps: number = 0;
 
     // ================================== //
     constructor(gameManager: GameManager)
@@ -146,6 +149,12 @@ class Solver
     public step(dt: number): void
     {
         if (this.urgentStop) return;
+
+        if (MAX_STEPS > 0 && this.currentSteps > MAX_STEPS) 
+        {
+            this.urgentStop = true;
+            return;
+        }
 
         const stepStart = performance.now();
         if (Math.abs(dt - this.dt) > 0.01)
@@ -308,7 +317,6 @@ class Solver
 
                 for (const energy of body.energies)
                 {
-                    console.log('hi');
                     energy.computeEnergyTerms(body);
 
                     const rows = energy.getRows();
@@ -322,8 +330,14 @@ class Solver
                             this.gameManager.logWarn("NaN detected in energy gradient, stopping simulation to prevent instability.");
                             return;
                         }
-                        this.gameManager.log(`Energy gradient magnitude: ${mag}`);
-                        glm.vec3.sub(rhs, rhs, energy.grad_E[j]);
+
+                        const rhsTerm = energy.grad_E[j];
+                        const maxMag: number = 50;
+                        if (mag > maxMag)
+                        {
+                            glm.vec3.scale(rhsTerm, rhsTerm, maxMag / mag);
+                        }
+                        glm.vec3.add(rhs, rhs, rhsTerm);
                         glm.mat3.add(lhs, lhs, energy.hess_E[j]);
                     }
                 }

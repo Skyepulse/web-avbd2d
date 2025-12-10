@@ -10,7 +10,7 @@ import * as glm from 'gl-matrix';
 import GameRenderer from "./GameRenderer";
 import RigidBox from "./RigidBox";
 import Solver from "./Solver";
-import { rand, randomPosInRectRot, randomColorUint8 } from "@src/helpers/MathUtils";
+import { rand, randomPosInRectRot, randomColorUint8, TESTS } from "@src/helpers/MathUtils";
 import { useLevels, type GObject } from '@src/helpers/Levels';
 import Joint from './Joint';
 import Spring from './Spring';
@@ -88,8 +88,9 @@ class GameManager
         this.solver = new Solver(this);
 
         this.solver.setDefaults();
-
         document.addEventListener("visibilitychange", this.handleAppVisibility.bind(this));
+
+        TESTS();
     }
 
     //================================//
@@ -1030,10 +1031,10 @@ class GameManager
         const B = this.makeParticle(-2.5, 0.0, mass, color);
         const C = this.makeParticle( 2.5, 0.0, mass, color);
 
-        const mu     = 36;
-        const lambda = 67;
+        const mu     = 100;
+        const lambda = 150;
 
-        const fem = new NeoHookianEnergy([A, B, C], mu, lambda);
+        const fem = new NeoHookianEnergy([B, C, A], mu, lambda);
         this.solver.addEnergy(fem);
 
         // Static floor

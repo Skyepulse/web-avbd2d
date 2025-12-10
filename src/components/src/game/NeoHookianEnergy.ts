@@ -43,7 +43,7 @@ class NeoHookianEnergy extends EnergyFEM
         this.bodyC = this.bodies[2]!;
 
         // The Neo Hookian model, with the log term omitted can be written as:
-        // E = mu/2 * (I1 - 2) - lambda * (J - a)^2
+        // E = mu/2 * (I1 - 2) + lambda * (J - a)^2
         // where I1 = trace(F^T F) and J = det(F) and a = 1 + mu/lambda
 
         // Compute rest shape matrix Dm
@@ -73,12 +73,9 @@ class NeoHookianEnergy extends EnergyFEM
         const dmInvT = glm.mat2.transpose(glm.mat2.create(), this.DmInverse);
 
         this.gradN1 = glm.vec2.fromValues(dmInvT[0], dmInvT[1]);
-        this.gradN2 = glm.vec2.fromValues(dmInvT[2], dmInvT[3]);
-
-        // For barycentric coordinates, N0 + N1 + N2 = 1, so grad(N0) + grad(N1) + grad(N2) = 0
-        // Therefore, gradN0 = -(gradN1 + gradN2)   
-        this.gradN0 = glm.vec2.create();
-        glm.vec2.scaleAndAdd(this.gradN0, this.gradN1, this.gradN2, -1);
+        this.gradN2 = glm.vec2.fromValues(dmInvT[2], dmInvT[3]); 
+        this.gradN0 = glm.vec2.negate(glm.vec2.create(), 
+            glm.vec2.add(glm.vec2.create(), this.gradN1, this.gradN2));
     }
 
     // ================================== //
@@ -107,25 +104,18 @@ class NeoHookianEnergy extends EnergyFEM
         const F: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
         const Ft : glm.mat2 = glm.mat2.transpose(glm.mat2.create(), F);
         const invFt = glm.mat2.invert(glm.mat2.create(), Ft);
-
-        console.log(`NeoHookianEnergy F: [${F[0]}, ${F[1]}, ${F[2]}, ${F[3]}]`);
-        console.log(`NeoHookianEnergy Ft: [${Ft[0]}, ${Ft[1]}, ${Ft[2]}, ${Ft[3]}]`);
         
         if (!invFt)
         {
             console.error("NeoHookianEnergy: Singular deformation gradient encountered.");
             return;
         }
-        console.log(`NeoHookianEnergy invFt: [${invFt[0]}, ${invFt[1]}, ${invFt[2]}, ${invFt[3]}]`);
 
         const J: number = glm.mat2.determinant(F);
         const rest: number = 1 - J;
 
-        console.log(`NeoHookianEnergy J: ${J}`);
-
         if (Math.abs(rest) < 1e-4)
         {
-            console.warn("Almost no deformation , skipping.");
             // Set gradient and hessian to zero
             this.grad_E[0] = glm.vec3.fromValues(0, 0, 0);
             this.hess_E[0] = glm.mat3.create();
@@ -145,19 +135,15 @@ class NeoHookianEnergy extends EnergyFEM
         // dE/dx = dE/dF * dF/dx
 
         // 1. Calculate ∂E/∂F (First Piola-Kirchhoff Stress Tensor, P)
-        // P = ∂E/∂F = mu * F - 2 * lambda * (J - a) * J * F^-T
+        // P = ∂E/∂F = mu * F + 2 * lambda * (J - a) * J * F^-T
         const dEdF: glm.mat2 = glm.mat2.create();
 
         // We know dI1/dF = 2F, since I1 = trace(F^T F)
         // We know dJ/dF = det(F) * F^-T = J * F^-T
         const t1 = scaleMat2D(F, this.lameMu);
-        console.log(`NeoHookianEnergy t1: [${t1[0]}, ${t1[1]}, ${t1[2]}, ${t1[3]}]`);
-        const t2 = scaleMat2D(invFt, -2 * this.lameLambda * (J - a) * J);
-        console.log(`NeoHookianEnergy t2: [${t2[0]}, ${t2[1]}, ${t2[2]}, ${t2[3]}]`);
+        const t2 = scaleMat2D(invFt, 2 * this.lameLambda * (J - a) * J);
         glm.mat2.add(dEdF, t1, t2);
-
-        console.log(`NeoHookianEnergy dE/dF: [${dEdF[0]}, ${dEdF[1]}, ${dEdF[2]}, ${dEdF[3]}]`);
-
+        
         // 2. Now we can compute dF/dx and then dE/dx
         // Typically grad_body_i = A0 * P * grad_Ni
         switch (body)
@@ -186,14 +172,12 @@ class NeoHookianEnergy extends EnergyFEM
                 break;
         }
 
-        console.log(`NeoHookianEnergy Gradient: [${this.grad_E[0][0]}, ${this.grad_E[0][1]}, ${this.grad_E[0][2]}]`);
-
         // NOW compute the hessian
         // d^2E/dx^2 = d/dx (dE/dF * dF/dx) = d^2E/dF^2 : dF/dx ⊗ dF/dx + dE/dF * d^2F/dx^2
         // But position is linear in F, so d^2F/dx^2 = 0
         // d^2E/dx^2 = d^2E/dF^2 : dF/dx ⊗ dF/dx
 
-        // d^2E/dF^2 = mu * I - 2 * lambda * J [(J - a) * (F^-T ⊗ F^-T)^T - (2J - a) * (F^-T ⊗ F^-T)]
+        // d^2E/dF^2 = mu * I + 2 * lambda * J [(J - a) * (F^-T ⊗ F^-T)^T + (2J - a) * (F^-T ⊗ F^-T)]
 
         const hess = glm.mat3.create();
         const gradN = glm.vec2.create();
@@ -221,7 +205,7 @@ class NeoHookianEnergy extends EnergyFEM
         const FinvT_gradN = glm.vec2.create();
         glm.vec2.transformMat2(FinvT_gradN, gradN, invFt);
         
-        const standardTerm = -(2 * J - a) * 2 * this.lameLambda * J * this.restArea;
+        const standardTerm = (2 * J - a) * 2 * this.lameLambda * J * this.restArea;
         hess[0] += standardTerm * FinvT_gradN[0] * FinvT_gradN[0];
         hess[1] += standardTerm * FinvT_gradN[1] * FinvT_gradN[0];
         hess[3] += standardTerm * FinvT_gradN[0] * FinvT_gradN[1];

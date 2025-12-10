@@ -177,3 +177,28 @@
       out[3]  = a[3] * b[0]; out[7]  = a[3] * b[1]; out[11] = a[3] * b[2]; out[15] = a[3] * b[3];
       return out;
   }
+
+  //================================//
+  export function TESTS(): void
+  {
+      // Validating glm.mat2 column-major order
+      const m: glm.mat2 = glm.mat2.fromValues(1, 2, 3, 4);
+      console.assert(m[0] === 1 && m[1] === 2 && m[2] === 3 && m[3] === 4, "glm.mat2 column-major order test failed.");
+
+      glm.mat2.set(m,
+          1, 3,
+          2, 4
+      );
+      console.assert(m[0] === 1 && m[1] === 3 && m[2] === 2 && m[3] === 4, "glm.mat2 set function test failed.");
+
+      const m1 = glm.mat2.create();
+      m1[0] = 1; m1[1] = 3; m1[2] = 2; m1[3] = 4;
+      const m2 = glm.mat2.create();
+      m2[0] = 5; m2[1] = 7; m2[2] = 6; m2[3] = 8;
+
+      // [ 1, 2       [ 5, 6        [19, 22 
+      //   3, 4 ]  x    7, 8 ]  =     43, 50 ]
+      //
+      const mMul = glm.mat2.multiply(glm.mat2.create(), m1, m2);
+      console.assert(mMul[0] === 19 && mMul[1] === 43 && mMul[2] === 22 && mMul[3] === 50, "glm.mat2 multiplication test failed.");
+  }

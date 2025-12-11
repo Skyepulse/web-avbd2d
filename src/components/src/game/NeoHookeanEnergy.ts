@@ -228,7 +228,18 @@ class NeoHookeanEnergy extends EnergyFEM
     //================================//
     public getContactRenders(): ContactRender[]
     {
-        return [];
+        return [
+            {
+                pos: this.bodyA.getPosition()
+            },
+            {
+                pos: this.bodyB.getPosition()
+            },
+            {
+                pos: this.bodyC.getPosition()
+            }
+        ];
+
     }
 
     //================================//

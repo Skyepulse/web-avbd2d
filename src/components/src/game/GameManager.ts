@@ -1047,17 +1047,45 @@ class GameManager
     {
         const mass = 1.0;
         const color = "#ffffff";
+        const mu     = 250;
+        const lambda = 250;
 
-        // A=top, B=bottom-left, C=bottom-right
-        const A = this.makeParticle(0.0, 4.0, mass, color);
-        const B = this.makeParticle(-2.5, 0.0, mass, color);
-        const C = this.makeParticle( 2.5, 0.0, mass, color);
+        const addArea = (A: RigidBox, B: RigidBox, C: RigidBox) => {
+            this.solver.addEnergy(
+                new NeoHookianEnergy(
+                    [A,B,C],
+                    mu,
+                    lambda
+                )
+            );
+        };
 
-        const mu     = 100;
-        const lambda = 150;
+        const createHexHookean = (cx: number, cy: number) =>
+        {
+            const R = 3.0;
+            const C = this.makeParticle(cx, cy, mass, color); // center
 
-        const fem = new NeoHookianEnergy([B, C, A], mu, lambda);
-        this.solver.addEnergy(fem);
+            const ring: RigidBox[] = [];
+            for (let i = 0; i < 6; i++)
+            {
+                const a = (Math.PI * 2 / 6) * i;
+                ring.push(this.makeParticle(
+                    cx + R * Math.cos(a),
+                    cy + R * Math.sin(a),
+                    mass,
+                    color
+                ));
+            }
+
+            // Area constraints
+            for (let i = 0; i < 6; i++)
+                addArea(C, ring[i], ring[(i+1)%6]); // center fan
+
+            for (let i = 0; i < 6; i++)
+                addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6]); // outer triangles
+        };
+        
+        createHexHookean(0, 5);
 
         // Static floor
         const floor = new RigidBox(

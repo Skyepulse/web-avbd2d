@@ -18,7 +18,7 @@ export function createParticle(position: vec2, mass: number, color: string): Rig
 {
     const size: vec2 = vec2.fromValues(0.5, 0.5);
     const density: number = mass / (size[0] * size[1]);
-    const friction: number = 0.0;
+    const friction: number = 0.5;
 
     const colorArr = new Uint8Array(4);
     colorArr[0] = parseInt(color.slice(1, 3), 16);

@@ -124,7 +124,7 @@ class NeoHookianEnergy extends EnergyFEM
         if (J <= 0) 
         {
             console.error("NeoHookianEnergy: Inverted element detected (J <= 0). Cannot reliably compute gradient.");
-            this.grad_E[0] = glm.vec3.fromValues(NaN, NaN, NaN);
+            this.grad_E[0] = glm.vec3.fromValues(0, 0, 0);
             this.hess_E[0] = glm.mat3.create();
             return;
         }

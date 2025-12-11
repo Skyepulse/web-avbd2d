@@ -46,7 +46,19 @@ fn vs(
     let ndcX = (worldView.x / uScreen.halfWorldSize.x) * (worldAspect / uScreen.aspectRatio);
     let ndcY =  worldView.y / uScreen.halfWorldSize.y;
 
-    let color = select(vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 1.0), lineInfo.size > 0.3);
+    var color: vec3f = vec3f(1.0, 1.0, 1.0);
+    if (lineInfo.size >= 0.5) 
+    {
+        color = vec3f(1.0, 1.0, 0.0);
+    } 
+    else if (lineInfo.size >= 0.4)
+    {
+        color = vec3f(0.0, 0.0, 1.0);
+    }
+    else 
+    {
+        color = vec3f(0.0, 1.0, 0.0);
+    }
     out.position = vec4f(ndcX, ndcY, 0.0, 1.0);
     out.color = color;
     return out;

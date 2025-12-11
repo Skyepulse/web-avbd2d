@@ -230,6 +230,26 @@ class Solver
             }
         }
 
+        for (let i = 0; i < this.energies.length; ++i)
+        {
+            const energy: EnergyFEM = this.energies[i];
+            const isUsed: boolean = energy.initialize();
+
+            if (!isUsed)
+            {
+                // Remove the energy if not used.
+                this.energies.splice(i, 1);
+                --i;
+                energy.destroy();
+                continue;
+            }
+
+            this.contactsToRender.push(...energy.getContactRenders());
+            this.contactLinesToRender.push(...energy.getContactLines());
+
+            // Nothing to warmstart for energies
+        }
+
          // Warmstart bodies
         for (let i = 0; i < this.bodies.length; ++i)
         {
@@ -341,7 +361,7 @@ class Solver
                             glm.vec3.scale(rhsTerm, rhsTerm, maxMag / mag);
                         }
                         glm.vec3.add(rhs, rhs, rhsTerm);
-                        glm.mat3.add(lhs, lhs, energy.hess_E[j]);
+                        //glm.mat3.add(lhs, lhs, energy.hess_E[j]);
                     }
                 }
 

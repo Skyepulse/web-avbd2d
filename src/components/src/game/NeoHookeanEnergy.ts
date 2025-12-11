@@ -2,8 +2,9 @@ import { scaleMat2D } from "@src/helpers/MathUtils";
 import EnergyFEM from "./EnergyFEM";
 import type RigidBox from "./RigidBox";
 import * as glm from "gl-matrix";
+import type { ContactRender, LineRender } from "./Manifold";
 
-class NeoHookianEnergy extends EnergyFEM
+class NeoHookeanEnergy extends EnergyFEM
 {
     private bodyA: RigidBox;
     private bodyB: RigidBox;
@@ -223,7 +224,41 @@ class NeoHookianEnergy extends EnergyFEM
         
         this.hess_E[0] = hess;
     }
+
+    //================================//
+    public getContactRenders(): ContactRender[]
+    {
+        return [];
+    }
+
+    //================================//
+    public getContactLines(): LineRender[] 
+    {
+        
+        // Return all edges:
+        const pA = this.bodyA.getPosition();
+        const pB = this.bodyB.getPosition();
+        const pC = this.bodyC.getPosition();
+
+        return [
+            {
+                posA: glm.vec3.fromValues(pA[0], pA[1], 0),
+                posB: glm.vec3.fromValues(pB[0], pB[1], 0),
+                size: 0.5,
+            },
+            {
+                posA: glm.vec3.fromValues(pB[0], pB[1], 0),
+                posB: glm.vec3.fromValues(pC[0], pC[1], 0),
+                size: 0.5,
+            },
+            {
+                posA: glm.vec3.fromValues(pC[0], pC[1], 0),
+                posB: glm.vec3.fromValues(pA[0], pA[1], 0),
+                size: 0.5,
+            },
+        ];
+    }
 }
 
 // ================================== //
-export default NeoHookianEnergy;
+export default NeoHookeanEnergy;

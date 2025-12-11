@@ -16,7 +16,7 @@ import Joint from './Joint';
 import Spring from './Spring';
 import { createParticle } from '@src/helpers/Others';
 import TriAreaConstraint from './TriAreaConstraint';
-import NeoHookianEnergy from './NeoHookianEnergy';
+import NeoHookianEnergy from './NeoHookeanEnergy';
 
 // ================================== //
 export interface performanceInformation
@@ -1047,10 +1047,8 @@ class GameManager
     {
         const mass = 1.0;
         const color = "#ffffff";
-        const mu     = 250;
-        const lambda = 250;
 
-        const addArea = (A: RigidBox, B: RigidBox, C: RigidBox) => {
+        const addArea = (A: RigidBox, B: RigidBox, C: RigidBox, mu: number, lambda: number) => {
             this.solver.addEnergy(
                 new NeoHookianEnergy(
                     [A,B,C],
@@ -1060,7 +1058,7 @@ class GameManager
             );
         };
 
-        const createHexHookean = (cx: number, cy: number) =>
+        const createHexHookean = (cx: number, cy: number, mu: number, lambda: number) =>
         {
             const R = 3.0;
             const C = this.makeParticle(cx, cy, mass, color); // center
@@ -1079,13 +1077,15 @@ class GameManager
 
             // Area constraints
             for (let i = 0; i < 6; i++)
-                addArea(C, ring[i], ring[(i+1)%6]); // center fan
+                addArea(C, ring[i], ring[(i+1)%6], mu, lambda); // center fan
 
             for (let i = 0; i < 6; i++)
-                addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6]); // outer triangles
+                addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6], mu, lambda); // outer triangles
         };
         
-        createHexHookean(0, 5);
+        createHexHookean(-10, 5, 20, 30);
+        createHexHookean(0, 5, 100, 150);
+        createHexHookean(10 , 5, 300, 350);
 
         // Static floor
         const floor = new RigidBox(

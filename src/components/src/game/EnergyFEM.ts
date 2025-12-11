@@ -5,6 +5,7 @@
 
 import * as glm from 'gl-matrix';
 import type RigidBox from './RigidBox';
+import type { ContactRender, LineRender } from './Manifold';
 
 class EnergyFEM
 {
@@ -40,6 +41,13 @@ class EnergyFEM
         return this.bodies;
     }
 
+    //================================//
+    public initialize(): boolean
+    {
+        // Nothing to initialize
+        return true;
+    }
+
     // ================================== //
     public getNumberOfBodies(): number
     {
@@ -72,6 +80,21 @@ class EnergyFEM
         this.bodies.length = 0;
         this.grad_E.length = 0;
         this.hess_E.length = 0;
+    }
+
+    //================================//
+    public getContactRenders(): ContactRender[]
+    {
+        console.warn("This method should not be called directly.");
+        return [];
+    }
+
+    // ================================== //
+    // posA, posB, size
+    public getContactLines(): LineRender[] 
+    {
+        console.warn("This method should not be called directly.");
+        return [];
     }
 }
 

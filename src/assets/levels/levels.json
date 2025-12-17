@@ -271,6 +271,11 @@
             "LevelID": 11,
             "LevelName": "StVK FEM (cloth)",
             "hardcoded": true
+        },
+        {
+            "LevelID": 12,
+            "LevelName": "Beam Simulation",
+            "hardcoded": true
         }
     ]
 }

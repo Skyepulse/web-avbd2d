@@ -1183,6 +1183,86 @@ class GameManager
             )
         );
     }
+
+    //================================//
+    public loadHardcodedLevel12(): void
+    {
+        const makeBeam = (length: number, width: number, mu: number, lambda: number, clampCenter: glm.vec2, resolution: number) =>
+        {
+            const dxTarget = resolution; // world-space resolution along length
+            const dyTarget = resolution; // world-space resolution along width
+
+            const Nx = Math.max(2, Math.floor(length / dxTarget) + 1);
+            const Ny = Math.max(2, Math.floor(width  / dyTarget) + 1);
+
+            const dx = length / (Nx - 1);
+            const dy = width  / (Ny - 1);
+
+            const mass = 0.1;
+
+            // Clamped right edge position
+            const xRight = clampCenter[0];
+            const yCenter = clampCenter[1];
+
+            const xLeft   = xRight - length;
+            const yBottom = yCenter - 0.5 * width;
+
+            const beam: RigidBox[][] = [];
+
+            // Particle list
+            for (let j = 0; j < Ny; j++)
+            {
+                beam[j] = [];
+                for (let i = 0; i < Nx; i++)
+                {
+                    const px = xLeft + i * dx;
+                    const py = yBottom + j * dy;
+                    beam[j][i] = this.makeParticle(px, py, mass, "#ffffff");
+                }
+            }
+
+            // ALl necessary Neo-Hookean energies
+            for (let j = 0; j < Ny - 1; j++)
+            {
+                for (let i = 0; i < Nx - 1; i++)
+                {
+                    const A = beam[j][i];
+                    const B = beam[j][i + 1];
+                    const C = beam[j + 1][i];
+                    const D = beam[j + 1][i + 1];
+
+                    // Consistent diagonal A–D
+                    this.solver.addEnergy(
+                        new NeoHookianEnergy([A, B, D], mu, lambda)
+                    );
+                    this.solver.addEnergy(
+                        new NeoHookianEnergy([A, D, C], mu, lambda)
+                    );
+                }
+            }
+
+            // Right edge is clamped
+            const stiff = glm.vec3.fromValues(Infinity, Infinity, 0.0);
+
+            for (let j = 0; j < Ny; j++)
+            {
+                const p = beam[j][Nx - 1];
+                const anchor = glm.vec2.fromValues(
+                    p.getPosition()[0],
+                    p.getPosition()[1]
+                );
+
+                this.solver.addForce(
+                    new Joint([null, p], anchor, glm.vec2.fromValues(0, 0), stiff)
+                );
+            }
+        }
+
+        makeBeam(20, 5, 500.0, 800.0, glm.vec2.fromValues(30, 10), 1.0);
+        makeBeam(20, 5, 300.0, 550.0, glm.vec2.fromValues(0, 0), 1.0);
+        makeBeam(20, 5, 100.0, 150.0, glm.vec2.fromValues(-30, -10), 1.0);
+
+    }
 }
 
 //================================//

@@ -17,6 +17,7 @@ import Spring from './Spring';
 import { createParticle } from '@src/helpers/Others';
 import TriAreaConstraint from './TriAreaConstraint';
 import NeoHookianEnergy from './NeoHookeanEnergy';
+import StVKEnergy from './StVKEnergy';
 
 // ================================== //
 export interface performanceInformation
@@ -1043,6 +1044,7 @@ class GameManager
         this.solver.addRigidBox(floor);
     }
 
+    //================================//
     public loadHardcodedLevel10(): void
     {
         const mass = 1.0;
@@ -1100,6 +1102,86 @@ class GameManager
         );
         floor.id = this.gameRenderer.addInstanceBox(floor);
         this.solver.addRigidBox(floor);
+    }
+
+    //================================//
+    public loadHardcodedLevel11(): void
+    {
+        const W = 8;
+        const H = 9;
+        const spacing = 2.0;
+        const mass = 0.1;
+
+        const mu = 300.0;
+        const lambda = 258.0;
+
+        const cloth: RigidBox[][] = [];
+
+        // The particles
+        for (let y = 0; y < H; y++)
+        {
+            cloth[y] = [];
+            for (let x = 0; x < W; x++)
+            {
+                const px = (x - W * 0.5) * spacing;
+                const py = (H - y) * spacing + 8.0;
+
+                cloth[y][x] = this.makeParticle(px, py, mass, "#ffffff");
+            }
+        }
+
+        // Energies
+        for (let y = 0; y < H - 1; y++)
+        {
+            for (let x = 0; x < W - 1; x++)
+            {
+                const A = cloth[y][x];
+                const B = cloth[y][x + 1];
+                const C = cloth[y + 1][x];
+                const D = cloth[y + 1][x + 1];
+
+                // Triangle 1: A–B–D
+                this.solver.addEnergy(
+                    new StVKEnergy([A, B, D], mu, lambda)
+                );
+
+                // Triangle 2: A–D–C
+                this.solver.addEnergy(
+                    new StVKEnergy([A, D, C], mu, lambda)
+                );
+            }
+        }
+
+        // We pin the corners
+        const pinA = glm.vec2.fromValues(
+            -(W - 1) * spacing * 0.5,
+            H * spacing + 8.0
+        );
+
+        const pinB = glm.vec2.fromValues(
+            (W - 1) * spacing * 0.5,
+            H * spacing + 8.0
+        );
+
+        const stiff = glm.vec3.fromValues(Infinity, Infinity, 0.0);
+
+        this.solver.addForce(
+            new Joint(
+                [null, cloth[0][0]],
+                pinA,
+                glm.vec2.fromValues(0, 0),
+                stiff
+            )
+        );
+
+        this.solver.addForce(
+            new Joint(
+                [null, cloth[0][W - 1]],
+                pinB,
+                glm.vec2.fromValues(0, 0),
+                stiff
+            )
+        );
     }
 }
 

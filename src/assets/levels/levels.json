@@ -266,6 +266,11 @@
             "LevelID": 10,
             "LevelName": "Neo-Hookian FEM",
             "hardcoded": true
+        },
+        {
+            "LevelID": 11,
+            "LevelName": "StVK FEM (cloth)",
+            "hardcoded": true
         }
     ]
 }

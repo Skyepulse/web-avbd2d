@@ -170,8 +170,6 @@
 
     const iterationsInput = ref<HTMLInputElement | null>(null);
 
-    const boxSpawnSelect = ref<HTMLSelectElement | null>(null);
-
     // ================================== //
     onMounted(() => {
         initializeValues();

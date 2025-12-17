@@ -142,6 +142,14 @@
       return out;
   }
 
+  //================================//
+  export function scaleMat3D(m: glm.mat3, scale: number): glm.mat3
+  {
+      const out: glm.mat3 = glm.mat3.create();
+      for (let i = 0; i < 9; ++i) out[i] = m[i] * scale;
+      return out;
+  }
+
   // ================================== //
   export function outerMat2D(a: glm.vec2, b: glm.vec2): glm.mat2
   {

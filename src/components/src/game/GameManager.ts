@@ -1083,9 +1083,11 @@ class GameManager
                 addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6], mu, lambda); // outer triangles
         };
         
-        createHexHookean(-10, 5, 20, 30);
-        createHexHookean(0, 5, 100, 150);
-        createHexHookean(10 , 5, 300, 350);
+        createHexHookean(-20, 5, 20, 30);
+        createHexHookean(-10, 5, 100, 150);
+        createHexHookean(0 , 5, 300, 350);
+        createHexHookean(10 , 5, 1000, 1500);
+        createHexHookean(20 , 5, 2000, 2500);
 
         // Static floor
         const floor = new RigidBox(

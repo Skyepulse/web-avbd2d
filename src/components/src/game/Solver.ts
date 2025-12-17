@@ -247,7 +247,28 @@ class Solver
             this.contactsToRender.push(...energy.getContactRenders());
             this.contactLinesToRender.push(...energy.getContactLines());
 
-            // Nothing to warmstart for energies
+            // Warmstarting energies
+            for (let j = 0; j < energy.getRows(); ++j)
+            {
+                if (this.postStabilization)
+                {
+                    // REUSE THE PENALTY FROM PREVIOUS STEP by gamma
+                    let newPenalty = energy.penalty[j] * this.gamma;
+                    if (newPenalty < PENALTY_MIN) newPenalty = PENALTY_MIN;
+                    if (newPenalty > PENALTY_MAX) newPenalty = PENALTY_MAX;
+                    energy.penalty[j] = newPenalty;
+                }
+                else
+                {
+                    energy.lambda[j] = energy.lambda[j] * this.alpha * this.gamma;
+                    let newPenalty = energy.penalty[j] * this.gamma;
+                    if (newPenalty < PENALTY_MIN) newPenalty = PENALTY_MIN;
+                    if (newPenalty > PENALTY_MAX) newPenalty = PENALTY_MAX;
+                    energy.penalty[j] = newPenalty;
+                }
+
+                energy.penalty[j] = Math.min(energy.penalty[j], energy.stiffness[j]);
+            }
         }
 
          // Warmstart bodies
@@ -353,15 +374,10 @@ class Solver
                             this.gameManager.logWarn("NaN detected in energy gradient, stopping simulation to prevent instability.");
                             return;
                         }
-
-                        const rhsTerm = energy.grad_E[j];
-                        const maxMag: number = 50;
-                        if (mag > maxMag)
-                        {
-                            glm.vec3.scale(rhsTerm, rhsTerm, maxMag / mag);
-                        }
-                        glm.vec3.add(rhs, rhs, rhsTerm);
-                        //glm.mat3.add(lhs, lhs, energy.hess_E[j]);
+                        
+                        // Accumulate forces (equation 13) and hessian (equation 17)
+                        glm.vec3.add(rhs, rhs, energy.grad_E[j]);
+                        glm.mat3.add(lhs, lhs, energy.hess_E[j]);
                     }
                 }
 

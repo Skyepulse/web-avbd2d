@@ -61,7 +61,6 @@ class Joint extends Force
     // ================================== //
     public initialize(): boolean 
     {
-        
         // Body A is optional, it can be the mouse world position or an anchor in world space
         this.C0 = glm.vec3.fromValues(0, 0, 0);
         let posA: glm.vec2 = transform2D(this.bodyA ? this.bodyA.getPosition() : glm.vec3.fromValues(0, 0, 0), this.rA);

@@ -77,6 +77,9 @@ class NeoHookeanEnergy extends EnergyFEM
         this.gradN2 = glm.vec2.fromValues(dmInvT[2], dmInvT[3]); 
         this.gradN0 = glm.vec2.negate(glm.vec2.create(), 
             glm.vec2.add(glm.vec2.create(), this.gradN1, this.gradN2));
+
+        // Choose an initial stiffness value
+        this.stiffness[0] = this.lameMu + 2 * this.lameLambda;
     }
 
     // ================================== //
@@ -104,7 +107,7 @@ class NeoHookeanEnergy extends EnergyFEM
         const F: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
         const Ft : glm.mat2 = glm.mat2.transpose(glm.mat2.create(), F);
         const invFt = glm.mat2.invert(glm.mat2.create(), Ft);
-        
+
         if (!invFt)
         {
             console.error("NeoHookianEnergy: Singular deformation gradient encountered.");
@@ -178,51 +181,47 @@ class NeoHookeanEnergy extends EnergyFEM
         // d^2E/dx^2 = d^2E/dF^2 : dF/dx ⊗ dF/dx
 
         // d^2E/dF^2 = mu * I + 2 * lambda * J [(J - a) * (F^-T ⊗ F^-T)^T + (2J - a) * (F^-T ⊗ F^-T)]
+        
+        // PSD approximation:
+        const b1 = glm.vec2.fromValues(this.DmInverse[0], this.DmInverse[1]);
+        const b2 = glm.vec2.fromValues(this.DmInverse[2], this.DmInverse[3]);
+        const b0 = glm.vec2.negate(glm.vec2.create(),
+            glm.vec2.add(glm.vec2.create(), b1, b2)
+        );
 
-        const hess = glm.mat3.create();
-        const gradN = glm.vec2.create();
+        let bi: glm.vec2 = glm.vec2.create(); // bodyA
         switch (body)
         {
-            case this.bodyA:
-                glm.vec2.copy(gradN, this.gradN0);
-                break;
-            case this.bodyB:
-                glm.vec2.copy(gradN, this.gradN1);
-                break;
-            case this.bodyC:
-                glm.vec2.copy(gradN, this.gradN2);
-                break;
+            case this.bodyA: bi = b0; break;
+            case this.bodyB: bi = b1; break;
+            case this.bodyC: bi = b2; break;
         }
 
-        // Term 1: mu * I contribution
-        const muTerm = this.lameMu * this.restArea;
-        hess[0] = muTerm * gradN[0] * gradN[0];  // ∂²E/∂xi²
-        hess[1] = muTerm * gradN[1] * gradN[0];  // ∂²E/∂yi∂xi
-        hess[3] = muTerm * gradN[0] * gradN[1];  // ∂²E/∂xi∂yi
-        hess[4] = muTerm * gradN[1] * gradN[1];  // ∂²E/∂yi²
+        // F^{-T} b_i
+        const FinvTbi = glm.vec2.create();
+        glm.vec2.transformMat2(FinvTbi, bi, invFt);
 
-        // Term 2: Volumetric standard contraction (diagonal only)
-        const FinvT_gradN = glm.vec2.create();
-        glm.vec2.transformMat2(FinvT_gradN, gradN, invFt);
-        
-        const standardTerm = (2 * J - a) * 2 * this.lameLambda * J * this.restArea;
-        hess[0] += standardTerm * FinvT_gradN[0] * FinvT_gradN[0];
-        hess[1] += standardTerm * FinvT_gradN[1] * FinvT_gradN[0];
-        hess[3] += standardTerm * FinvT_gradN[0] * FinvT_gradN[1];
-        hess[4] += standardTerm * FinvT_gradN[1] * FinvT_gradN[1];
+        const bi2 = glm.vec2.dot(bi, bi);
+        const kMu = this.lameMu * bi2;
 
-        // Term 3: Transposed contraction (diagonal only)
-        const invF = glm.mat2.transpose(glm.mat2.create(), invFt);
-        const invFt_invF = glm.mat2.multiply(glm.mat2.create(), invFt, invF);
-        const temp = glm.vec2.create();
-        glm.vec2.transformMat2(temp, gradN, invFt_invF);
-        const transposedContraction = glm.vec2.dot(gradN, temp);
-        
-        const transposedTerm = (J - a) * 2 * this.lameLambda * J * this.restArea;
-        hess[0] += transposedTerm * transposedContraction;
-        hess[4] += transposedTerm * transposedContraction;
-        
-        this.hess_E[0] = hess;
+        const g0 = FinvTbi[0], g1 = FinvTbi[1];
+        const kLam = this.lameLambda * (J * J + (J - a) * (J - a));
+
+        const H00 = kMu + kLam * (g0 * g0);
+        const H01 =        kLam * (g0 * g1);
+        const H10 =        kLam * (g1 * g0);
+        const H11 = kMu + kLam * (g1 * g1);
+
+        // scale by rest area to get energy from density
+        const s = this.restArea;
+
+        // H = A0 * (mu * ||bi||^2 * I + lambda * (J*J + (J - a)*(J - a)) * (F^-T bi) * (F^-T bi)^T)
+        // This is a PSD approximation of the Hessian
+        this.hess_E[0] = glm.mat3.fromValues(
+            s * H00, s * H10, 0,
+            s * H01, s * H11, 0,
+            0,       0,       0
+        );
     }
 
     //================================//

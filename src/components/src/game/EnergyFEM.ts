@@ -15,6 +15,12 @@ class EnergyFEM
     public grad_E: glm.vec3[] = []; // VECTOR3 grad_E
     public hess_E: glm.mat3[] = []; // MATRIX3 hess_E
 
+    public stiffness: number[] = []; // per row stiffness
+    public lambda: number[] = [];
+    public penalty: number[] = [];
+    public fmin: number[] = [];
+    public fmax: number[] = [];
+
     // =============== PUBLIC =================== //
     constructor(bodiesArray: (RigidBox | null)[])
     {
@@ -32,6 +38,12 @@ class EnergyFEM
 
             const m = glm.mat3.create();
             this.hess_E.push(m);
+
+            this.stiffness.push(Infinity);
+            this.lambda.push(0);
+            this.penalty.push(0);
+            this.fmin.push(-Infinity);
+            this.fmax.push(Infinity);
         }
     }
 

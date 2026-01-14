@@ -105,29 +105,48 @@ class NeoHookeanEnergy extends EnergyFEM
         );
 
         const F: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
-        const Ft : glm.mat2 = glm.mat2.transpose(glm.mat2.create(), F);
+        const J: number = glm.mat2.determinant(F);
+
+        // Handle inverted/degenerate elements !!EXPERIMENTAL!!
+        if (J <= 1e-6) 
+        {
+            const stiffPenalty = this.lameMu + this.lameLambda;
+            
+            // Push back strongly in the direction that increases J
+            // Gradient of J with respect to position
+            let bi: glm.vec2;
+            switch (body) {
+                case this.bodyA: bi = this.gradN0; break;
+                case this.bodyB: bi = this.gradN1; break;
+                case this.bodyC: bi = this.gradN2; break;
+                default: return;
+            }
+            
+            const cofF = glm.mat2.fromValues(F[3], -F[1], -F[2], F[0]);
+            const dJdxi = glm.vec2.transformMat2(glm.vec2.create(), bi, cofF);
+            
+            // Strong penalty gradient pushing away from inversion
+            const penaltyMag = stiffPenalty * (1e-6 - J);
+            this.grad_E[0] = glm.vec3.fromValues(
+                -this.restArea * penaltyMag * dJdxi[0],
+                -this.restArea * penaltyMag * dJdxi[1],
+                0
+            );
+            
+            // Diagonal Hessian for stability
+            this.hess_E[0] = glm.mat3.fromValues(
+                this.restArea * stiffPenalty, 0, 0,
+                0, this.restArea * stiffPenalty, 0,
+                0, 0, 0
+            );
+            return;
+        }
+
+        const Ft = glm.mat2.transpose(glm.mat2.create(), F);
         const invFt = glm.mat2.invert(glm.mat2.create(), Ft);
 
-        if (!invFt)
+        if (!invFt) 
         {
-            console.error("NeoHookianEnergy: Singular deformation gradient encountered.");
-            return;
-        }
-
-        const J: number = glm.mat2.determinant(F);
-        const rest: number = 1 - J;
-
-        if (Math.abs(rest) < 1e-16)
-        {
-            // Set gradient and hessian to zero
-            this.grad_E[0] = glm.vec3.fromValues(0, 0, 0);
-            this.hess_E[0] = glm.mat3.create();
-            return;
-        }
-
-        if (J <= 0) 
-        {
-            console.error("NeoHookianEnergy: Inverted element detected (J <= 0). Cannot reliably compute gradient.");
             this.grad_E[0] = glm.vec3.fromValues(0, 0, 0);
             this.hess_E[0] = glm.mat3.create();
             return;
@@ -143,51 +162,40 @@ class NeoHookeanEnergy extends EnergyFEM
 
         // We know dI1/dF = 2F, since I1 = trace(F^T F)
         // We know dJ/dF = det(F) * F^-T = J * F^-T
-        const t1 = scaleMat2D(F, this.lameMu);
-        const t2 = scaleMat2D(invFt, 2 * this.lameLambda * (J - a) * J);
+        const t1 = scaleMat2D(glm.mat2.clone(F), this.lameMu);
+        const t2 = scaleMat2D(glm.mat2.clone(invFt), 2 * this.lameLambda * (J - a) * J);
         glm.mat2.add(dEdF, t1, t2);
         
         // 2. Now we can compute dF/dx and then dE/dx
         // Typically grad_body_i = A0 * P * grad_Ni
-        switch (body)
-        {
-            case this.bodyA:
-                const gradVecA = glm.vec2.create();
-                glm.vec2.transformMat2(gradVecA, this.gradN0, dEdF);
-                this.grad_E[0][0] = this.restArea * gradVecA[0];
-                this.grad_E[0][1] = this.restArea * gradVecA[1];
-                this.grad_E[0][2] = 0;
-                break;
-            case this.bodyB:
-                const gradVecB = glm.vec2.create();
-                glm.vec2.transformMat2(gradVecB, this.gradN1, dEdF);
-                this.grad_E[0][0] = this.restArea * gradVecB[0];
-                this.grad_E[0][1] = this.restArea * gradVecB[1];
-                this.grad_E[0][2] = 0;
-                break;
-
-            case this.bodyC:
-                const gradVecC = glm.vec2.create();
-                glm.vec2.transformMat2(gradVecC, this.gradN2, dEdF);
-                this.grad_E[0][0] = this.restArea * gradVecC[0];
-                this.grad_E[0][1] = this.restArea * gradVecC[1];
-                this.grad_E[0][2] = 0;
-                break;
+        let gradNi: glm.vec2;
+        switch (body) {
+            case this.bodyA: gradNi = this.gradN0; break;
+            case this.bodyB: gradNi = this.gradN1; break;
+            case this.bodyC: gradNi = this.gradN2; break;
+            default: return;
         }
+        const gradVec = glm.vec2.transformMat2(glm.vec2.create(), gradNi, dEdF);
+        this.grad_E[0] = glm.vec3.fromValues(
+            this.restArea * gradVec[0],
+            this.restArea * gradVec[1],
+            0
+        );
 
         // NOW compute the hessian
+        // The full Hessian for Neo-Hookean in 2D has the form:
+        // H_ij = A0 * (∂P/∂F : ∂F/∂x_i ⊗ ∂F/∂x_j)
+
+        // We want
         // d^2E/dx^2 = d/dx (dE/dF * dF/dx) = d^2E/dF^2 : dF/dx ⊗ dF/dx + dE/dF * d^2F/dx^2
         // But position is linear in F, so d^2F/dx^2 = 0
         // d^2E/dx^2 = d^2E/dF^2 : dF/dx ⊗ dF/dx
-
         // d^2E/dF^2 = mu * I + 2 * lambda * J [(J - a) * (F^-T ⊗ F^-T)^T + (2J - a) * (F^-T ⊗ F^-T)]
         
         // PSD approximation:
         const b1 = glm.vec2.fromValues(this.DmInverse[0], this.DmInverse[1]);
         const b2 = glm.vec2.fromValues(this.DmInverse[2], this.DmInverse[3]);
-        const b0 = glm.vec2.negate(glm.vec2.create(),
-            glm.vec2.add(glm.vec2.create(), b1, b2)
-        );
+        const b0 = glm.vec2.negate(glm.vec2.create(), glm.vec2.add(glm.vec2.create(), b1, b2));
 
         let bi: glm.vec2 = glm.vec2.create(); // bodyA
         switch (body)
@@ -195,30 +203,33 @@ class NeoHookeanEnergy extends EnergyFEM
             case this.bodyA: bi = b0; break;
             case this.bodyB: bi = b1; break;
             case this.bodyC: bi = b2; break;
+            default: return;
         }
 
-        // F^{-T} b_i
-        const FinvTbi = glm.vec2.create();
-        glm.vec2.transformMat2(FinvTbi, bi, invFt);
+        // F^{-T} * b_i (needed for volumetric Hessian term)
+        const FinvTbi = glm.vec2.transformMat2(glm.vec2.create(), bi, invFt);
 
+        // We compute an SPD approximation following the approach in:
         const bi2 = glm.vec2.dot(bi, bi);
+        // kMu = mu * ||bi||^2 * I (Deviatoric (μ) contribution - always SPD)
         const kMu = this.lameMu * bi2;
 
+        // Volumetric (λ) contribution  
+        // For stability, we use: λ * max(J, threshold)² * (F^{-T}b_i)(F^{-T}b_i)^T
+        // Plus a term that handles the (J-a) factor
+        const J_clamped = Math.max(J, 0.1); // Stability purpose clamp
+        const volCoeff = this.lameLambda * (J_clamped * J_clamped + Math.max(0, (J - a)) * Math.max(0, (J - a)));
         const g0 = FinvTbi[0], g1 = FinvTbi[1];
-        const kLam = this.lameLambda * (J * J + (J - a) * (J - a));
 
-        const H00 = kMu + kLam * (g0 * g0);
-        const H01 =        kLam * (g0 * g1);
-        const H10 =        kLam * (g1 * g0);
-        const H11 = kMu + kLam * (g1 * g1);
+        // H_vol ≈ λ * [ (2J-a)² + (J-a)² ] * (F^{-T}bi)(F^{-T}bi)^T
+        const H00 = kMu + volCoeff * (g0 * g0);
+        const H01 =        volCoeff * (g0 * g1);
+        const H11 = kMu + volCoeff * (g1 * g1);
 
         // scale by rest area to get energy from density
         const s = this.restArea;
-
-        // H = A0 * (mu * ||bi||^2 * I + lambda * (J*J + (J - a)*(J - a)) * (F^-T bi) * (F^-T bi)^T)
-        // This is a PSD approximation of the Hessian
         this.hess_E[0] = glm.mat3.fromValues(
-            s * H00, s * H10, 0,
+            s * H00, s * H01, 0,
             s * H01, s * H11, 0,
             0,       0,       0
         );

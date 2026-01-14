@@ -744,7 +744,7 @@ class GameManager
         const H = 9;
         const spacing = 2.0;
         const mass = 0.1;
-        const stiffness = 100.0;
+        const stiffness = 500.0;
 
         const cloth: RigidBox[][] = [];
 
@@ -952,12 +952,13 @@ class GameManager
         // Three different area stiffness values
         const AREA_WEAK   = 100.0;
         const AREA_MEDIUM = 1000.0;
-        const AREA_STRONG = 10000.0;
+        const AREA_STRONG = 50000.0;
 
         // Three different spring stiffness values
         const SPRING_WEAK   = 50.0;
         const SPRING_MEDIUM = 250.0;
-        const SPRING_STRONG = 1000.0;
+        const SPRING_STRONG = Infinity;
+
 
         const addSpring = (A: RigidBox, B: RigidBox, k: number) => {
             const rest = glm.vec2.distance(A.getPos2(), B.getPos2());
@@ -1259,8 +1260,8 @@ class GameManager
         }
 
         makeBeam(20, 5, 500.0, 800.0, glm.vec2.fromValues(30, 10), 1.0);
-        makeBeam(20, 5, 300.0, 550.0, glm.vec2.fromValues(0, 0), 1.0);
-        makeBeam(20, 5, 100.0, 150.0, glm.vec2.fromValues(-30, -10), 1.0);
+        //makeBeam(20, 5, 300.0, 550.0, glm.vec2.fromValues(0, 0), 1.0);
+        //makeBeam(20, 5, 100.0, 150.0, glm.vec2.fromValues(-30, -10), 1.0);
 
     }
 }

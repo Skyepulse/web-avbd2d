@@ -104,6 +104,30 @@
             @change="(event) => { if (gameManager) { gameManager.modifyPostStabilization((event.target as HTMLInputElement).checked); } }"
             />
         </div>
+        <div id="energy-ramp-picker" class="flex flex-row space-x-1">
+            <label for="energy-ramp">Use energy stiffness ramp:</label>
+            <input
+            id="energy-ramp"
+            type="checkbox"
+            :checked="gameManager ? gameManager.getUseEnergyRamp() : false"
+            @change="(event) => { if (gameManager) { gameManager.modifyUseEnergyRamp((event.target as HTMLInputElement).checked); } }"
+            />
+        </div>
+        <div id="beta-energy-picker" class="flex flex-row space-x-1" v-if ="gameManager && gameManager.getUseEnergyRamp()">
+            <label for="beta">Beta E:</label>
+            <input
+            ref="betaEnergyInput"
+            id="betaEnergy"
+            type="range"
+            min="0"
+            max="1"
+            step="0.001"
+            value="0.8333"
+            @input="setBetaEnergyLabel()"
+            @change="setBetaEnergy()"
+            />
+            <label id="betaEnergyValue" ref="betaEnergyLabel">10</label>
+        </div>
         <div id="beta-picker" class="flex flex-row space-x-1">
             <label for="beta">Beta:</label>
             <input
@@ -165,6 +189,9 @@
     const betaLabel = ref<HTMLLabelElement | null>(null);
     const betaInput = ref<HTMLInputElement | null>(null);
 
+    const betaEnergyLabel = ref<HTMLLabelElement | null>(null);
+    const betaEnergyInput = ref<HTMLInputElement | null>(null);
+
     const gammaLabel = ref<HTMLLabelElement | null>(null);
     const gammaInput = ref<HTMLInputElement | null>(null);
 
@@ -178,39 +205,46 @@
     // ================================== //
     function initializeValues()
     {
-        if(!betaLabel.value || !betaInput.value)
+        // Beta
+        if(betaLabel.value && betaInput.value)
         {
-            return;
+            betaLabel.value.textContent = '100000';
+            betaInput.value.value = betaToSlider(100000).toString();
         }
-        betaLabel.value.textContent =  '100000';
-        betaInput.value.value = betaToSlider(100000).toString();
 
-        if(!gammaLabel.value || !gammaInput.value)
+        // Beta Energy
+        if(betaEnergyLabel.value && betaEnergyInput.value)
         {
-            return;
+            betaEnergyLabel.value.textContent = '10';
+            betaEnergyInput.value.value = betaEnergyToSlider(10).toString();
         }
-        gammaLabel.value.textContent =  "0.99";
-        gammaInput.value.value = "0.99";
 
-        if(!gravityLabel.value || !gravityYInput.value)
+        // Gamma
+        if(gammaLabel.value && gammaInput.value)
         {
-            return;
+            gammaLabel.value.textContent = "0.99";
+            gammaInput.value.value = "0.99";
         }
-        gravityLabel.value.textContent = "-9.81";
-        gravityYInput.value.value = "-9.81";
 
-        if(!iterationsInput.value)
+        // Gravity
+        if(gravityLabel.value && gravityYInput.value)
         {
-            return;
+            gravityLabel.value.textContent = "-9.81";
+            gravityYInput.value.value = "-9.81";
         }
-        iterationsInput.value.value = "10";
 
-        if(!alphaLabel.value || !alphaInput.value || !gameManager.value || gameManager.value.getPostStabilization())
+        // Iterations
+        if(iterationsInput.value)
+        {
+            iterationsInput.value.value = "10";
+        }
+
+        // Alpha (only if not using post stabilization)
+        if(alphaLabel.value && alphaInput.value && gameManager.value && !gameManager.value.getPostStabilization())
         { 
-            return;
+            alphaLabel.value.textContent = "0.99";
+            alphaInput.value.value = "0.99";
         }
-        alphaLabel.value.textContent =  "0.99";
-        alphaInput.value.value = "0.99";
     }
 
     // ================================== //
@@ -274,6 +308,24 @@
     }
 
     //================================//
+    function setBetaEnergyLabel()
+    {
+        const sliderValue = parseFloat(betaEnergyInput.value!.value);
+        const beta = sliderToBetaEnergy(sliderValue);
+        betaEnergyLabel.value!.textContent =  beta.toFixed(0);
+    }
+
+    //================================//
+    function setBetaEnergy() {
+        const sliderValue = parseFloat(betaEnergyInput.value!.value);
+        const beta = sliderToBetaEnergy(sliderValue);
+
+        if (gameManager.value ) {
+            gameManager.value.modifyBetaEnergy(beta);
+        }
+    }
+
+    //================================//
     function sliderToBeta(sliderValue: number): number {
         const min = 1.0;
         const max = 1000000.0;
@@ -285,6 +337,23 @@
 
     //================================//
     function betaToSlider(beta: number): number {
+        const min = 1.0;
+        const max = 1000000.0;
+        return (Math.log10(beta) - Math.log10(min)) / (Math.log10(max) - Math.log10(min));
+    }
+
+    //================================//
+    function sliderToBetaEnergy(sliderValue: number): number {
+        const min = 1.0;
+        const max = 1000000.0;
+
+        // Logarithmic mapping: evenly distributes on a log10 scale
+        const exp = Math.log10(min) + sliderValue * (Math.log10(max) - Math.log10(min));
+        return Math.pow(10, exp);
+    }
+
+    //================================//
+    function betaEnergyToSlider(beta: number): number {
         const min = 1.0;
         const max = 1000000.0;
         return (Math.log10(beta) - Math.log10(min)) / (Math.log10(max) - Math.log10(min));

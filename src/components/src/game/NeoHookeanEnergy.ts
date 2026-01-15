@@ -79,7 +79,8 @@ class NeoHookeanEnergy extends EnergyFEM
             glm.vec2.add(glm.vec2.create(), this.gradN1, this.gradN2));
 
         // Choose an initial stiffness value
-        this.stiffness[0] = this.lameMu + 2 * this.lameLambda;
+        this.targetStiffness[0] = this.lameMu + 2 * this.lameLambda;
+        this.effectiveStiffness[0] = 1.0;
     }
 
     // ================================== //
@@ -88,10 +89,9 @@ class NeoHookeanEnergy extends EnergyFEM
         return 1;
     }
 
-    // ================================== //
-    public computeEnergyTerms(body: RigidBox): void
+    //================================//
+    private computeDeformationGradient(): { F: glm.mat2, J: number }
     {
-        // Get current positions
         const pA = this.bodyA.getPosition();
         const pB = this.bodyB.getPosition();
         const pC = this.bodyC.getPosition();
@@ -104,9 +104,49 @@ class NeoHookeanEnergy extends EnergyFEM
             edge2[0], edge2[1]
         );
 
-        const F: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
-        const J: number = glm.mat2.determinant(F);
+        const F = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
+        const J = glm.mat2.determinant(F);
 
+        return { F, J };
+    }
+
+    //================================//
+    public updateStrainMeasures(): void
+    {
+        const { F, J } = this.computeDeformationGradient();
+
+        // Compute strain measure: Frobenius norm of (F - I) + volumetric strain
+        // This measures how far we are from the rest configuration
+        const FminusI = glm.mat2.fromValues(
+            F[0] - 1, F[1],
+            F[2], F[3] - 1
+        );
+        
+        const frobNorm = Math.sqrt(
+            FminusI[0]*FminusI[0] + FminusI[1]*FminusI[1] + 
+            FminusI[2]*FminusI[2] + FminusI[3]*FminusI[3]
+        );
+        
+        const volStrain = Math.abs(J - 1);
+        this.strainMeasure[0] = frobNorm + volStrain;
+    }
+
+    // ================================== //
+    public computeEnergyTerms(body: RigidBox): void
+    {
+        const { F, J } = this.computeDeformationGradient();
+
+        // ALSO update strain measure here so it's always current
+        const FminusI = glm.mat2.fromValues(
+            F[0] - 1, F[1],
+            F[2], F[3] - 1
+        );
+        const frobNorm = Math.sqrt(
+            FminusI[0]*FminusI[0] + FminusI[1]*FminusI[1] + 
+            FminusI[2]*FminusI[2] + FminusI[3]*FminusI[3]
+        );
+        this.strainMeasure[0] = frobNorm + Math.abs(J - 1);
+        
         // Handle inverted/degenerate elements !!EXPERIMENTAL!!
         if (J <= 1e-6) 
         {

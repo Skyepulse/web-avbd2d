@@ -80,7 +80,8 @@ class StVKEnergy extends EnergyFEM
             glm.vec2.add(glm.vec2.create(), this.gradN1, this.gradN2));
 
         // Choose an initial stiffness value
-        this.stiffness[0] = this.lameMu + 2 * this.lameLambda;
+        this.targetStiffness[0] = this.lameMu + 2 * this.lameLambda;
+        this.effectiveStiffness[0] = 1.0;
     }
 
     // ================================== //
@@ -90,9 +91,8 @@ class StVKEnergy extends EnergyFEM
     }
 
     // ================================== //
-    public computeEnergyTerms(body: RigidBox): void
+    private computeDeformationGradient(): { F: glm.mat2, Ft: glm.mat2, L: glm.mat2 }
     {
-        // Get current positions
         const pA = this.bodyA.getPosition();
         const pB = this.bodyB.getPosition();
         const pC = this.bodyC.getPosition();
@@ -105,17 +105,52 @@ class StVKEnergy extends EnergyFEM
             edge2[0], edge2[1]
         );
 
-        const F: glm.mat2 = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
-        const Ft : glm.mat2 = glm.mat2.transpose(glm.mat2.create(), F);
+        const F = glm.mat2.multiply(glm.mat2.create(), Ds, this.DmInverse);
+        const Ft = glm.mat2.transpose(glm.mat2.create(), F);
+
+        // Green strain tensor: L = 0.5 * (F^T * F - I)
+        const FtF = glm.mat2.multiply(glm.mat2.create(), Ft, F);
+        const I = glm.mat2.identity(glm.mat2.create());
+        let L = glm.mat2.subtract(glm.mat2.create(), FtF, I);
+        L = scaleMat2D(L, 0.5);
+
+        return { F, Ft, L };
+    }
+
+    // ================================== //
+    public updateStrainMeasures(): void
+    {
+        const { L } = this.computeDeformationGradient();
+
+        // For StVK, use the Frobenius norm of the Green strain tensor L
+        // This measures how far we are from the rest configuration
+        const frobNormL = Math.sqrt(
+            L[0]*L[0] + L[1]*L[1] + 
+            L[2]*L[2] + L[3]*L[3]
+        );
+
+        // Also include trace of L (volumetric strain measure)
+        const traceL = Math.abs(L[0] + L[3]);
+        this.strainMeasure[0] = frobNormL + traceL;
+    }
+
+    // ================================== //
+    public computeEnergyTerms(body: RigidBox): void
+    {
+        const { F, Ft, L } = this.computeDeformationGradient();
+
+        // Update strain measure so it's always current
+        const frobNormL = Math.sqrt(
+            L[0]*L[0] + L[1]*L[1] + 
+            L[2]*L[2] + L[3]*L[3]
+        );
+        const traceL = Math.abs(L[0] + L[3]);
+        this.strainMeasure[0] = frobNormL + traceL; 
 
         // First derivative (gradient) computation
         // dE/dx = dE/dF : dF/dx
-        const FtF = glm.mat2.multiply(glm.mat2.create(), Ft, F);
         const I = glm.mat2.create();
         glm.mat2.identity(I);
-
-        let L = glm.mat2.subtract(glm.mat2.create(), FtF, I);
-        L = scaleMat2D(L, 0.5);
 
         // Compute first Piola-Kirchhoff stress tensor P
         // P = F * (lambda * tr(L) * I + 2 * mu * L)

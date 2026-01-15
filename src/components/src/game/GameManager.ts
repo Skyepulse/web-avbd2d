@@ -282,6 +282,12 @@ class GameManager
         this.solver.setBeta(beta);
     }
 
+    //================================//
+    public modifyBetaEnergy(beta: number): void
+    {
+        this.solver.setBetaEnergy(beta);
+    }
+
     // ================================== //
     public modifyGamma(gamma: number): void
     {
@@ -313,6 +319,18 @@ class GameManager
     public getPostStabilization(): boolean
     {
         return this.solver.getIsPostStabilization();
+    }
+
+    //================================//
+    public getUseEnergyRamp(): boolean
+    {
+        return this.solver.getUseEnergyRamp();
+    }
+
+    //================================//
+    public modifyUseEnergyRamp(enabled: boolean): void
+    {
+        this.solver.setUseEnergyRamp(enabled);
     }
 
     // ================================== //
@@ -1089,8 +1107,8 @@ class GameManager
         createHexHookean(-20, 5, 20, 30);
         createHexHookean(-10, 5, 100, 150);
         createHexHookean(0 , 5, 300, 350);
-        createHexHookean(10 , 5, 1000, 1500);
-        createHexHookean(20 , 5, 2000, 2500);
+        createHexHookean(10 , 5, 2000, 2500);
+        createHexHookean(20 , 5, 3000, 3500);
 
         // Static floor
         const floor = new RigidBox(
@@ -1259,8 +1277,8 @@ class GameManager
             }
         }
 
-        makeBeam(20, 5, 500.0, 800.0, glm.vec2.fromValues(30, 10), 1.0);
-        //makeBeam(20, 5, 300.0, 550.0, glm.vec2.fromValues(0, 0), 1.0);
+        makeBeam(20, 5, 1500.0, 2000.0, glm.vec2.fromValues(30, 10), 1.0);
+        //makeBeam(20, 5, 500.0, 800.0, glm.vec2.fromValues(0, 0), 1.0);
         //makeBeam(20, 5, 100.0, 150.0, glm.vec2.fromValues(-30, -10), 1.0);
 
     }

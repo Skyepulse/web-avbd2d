@@ -16,6 +16,7 @@ import type EnergyFEM from './EnergyFEM';
 
 const PENALTY_MIN = 1;
 const PENALTY_MAX = 1000000000;
+const ENERGY_STIFFNESS_MIN = 0.01;
 
 const MAX_STEPS = -100;
 
@@ -29,6 +30,8 @@ class Solver
     public alpha: number = 0.99;
     public beta: number = 100000;
     public gamma: number = 0.99;
+    public betaEnergy: number = 10; // For energy based stabilization
+    public useEnergyRamp: boolean = true;
 
     public postStabilization: boolean = false;
 
@@ -102,34 +105,14 @@ class Solver
     }
 
     //================================//
-    public setAlpha(newAlpha: number): void
-    {
-        this.alpha = newAlpha;
-    }
-
-    //================================//
-    public setBeta(newBeta: number): void
-    {
-        this.beta = newBeta;
-    }
-
-    //================================//
-    public setGamma(newGamma: number): void
-    {
-        this.gamma = newGamma;
-    }
-
-    //================================//
-    public getIsPostStabilization(): boolean
-    {
-        return this.postStabilization;
-    }
-
-    //================================//
-    public setIsPostStabilization(isPostStabilization: boolean): void
-    {
-        this.postStabilization = isPostStabilization;
-    }
+    public setAlpha(newAlpha: number): void { this.alpha = newAlpha; }
+    public setBeta(newBeta: number): void { this.beta = newBeta; }
+    public setGamma(newGamma: number): void { this.gamma = newGamma; }
+    public setBetaEnergy(newBetaEnergy: number): void { this.betaEnergy = newBetaEnergy; }
+    public setUseEnergyRamp(useEnergyRamp: boolean): void { this.useEnergyRamp = useEnergyRamp; }
+    public getUseEnergyRamp(): boolean { return this.useEnergyRamp; }
+    public getIsPostStabilization(): boolean { return this.postStabilization; }
+    public setIsPostStabilization(isPostStabilization: boolean): void { this.postStabilization = isPostStabilization; }
 
     //================================//
     public setDefaults(): void
@@ -139,6 +122,7 @@ class Solver
         this.iterations = 10;
 
         this.beta = 100000;
+        this.betaEnergy = 10;
         this.alpha = 0.99;
         this.gamma = 0.99;
 
@@ -188,7 +172,7 @@ class Solver
             }
         }
 
-        // WarmStarting and Initialization
+        // WarmStarting and Initialization FORCES
         for (let i = 0; i < this.forces.length; ++i)
         {
             const force: Force = this.forces[i];
@@ -230,6 +214,7 @@ class Solver
             }
         }
 
+        // WarmStarting and Initialization ENERGIES
         for (let i = 0; i < this.energies.length; ++i)
         {
             const energy: EnergyFEM = this.energies[i];
@@ -247,27 +232,13 @@ class Solver
             this.contactsToRender.push(...energy.getContactRenders());
             this.contactLinesToRender.push(...energy.getContactLines());
 
-            // Warmstarting energies
+            // Warmstarting energies Scale down by gamma and betaEnergy
             for (let j = 0; j < energy.getRows(); ++j)
             {
-                if (this.postStabilization)
-                {
-                    // REUSE THE PENALTY FROM PREVIOUS STEP by gamma
-                    let newPenalty = energy.penalty[j] * this.gamma;
-                    if (newPenalty < PENALTY_MIN) newPenalty = PENALTY_MIN;
-                    if (newPenalty > PENALTY_MAX) newPenalty = PENALTY_MAX;
-                    energy.penalty[j] = newPenalty;
-                }
-                else
-                {
-                    energy.lambda[j] = energy.lambda[j] * this.alpha * this.gamma;
-                    let newPenalty = energy.penalty[j] * this.gamma;
-                    if (newPenalty < PENALTY_MIN) newPenalty = PENALTY_MIN;
-                    if (newPenalty > PENALTY_MAX) newPenalty = PENALTY_MAX;
-                    energy.penalty[j] = newPenalty;
-                }
-
-                energy.penalty[j] = Math.min(energy.penalty[j], energy.stiffness[j]);
+                let newEffective = energy.effectiveStiffness[j] * this.gamma;
+                newEffective = Math.max(ENERGY_STIFFNESS_MIN, newEffective);
+                newEffective = Math.min(newEffective, energy.targetStiffness[j]);
+                energy.effectiveStiffness[j] = newEffective;
             }
         }
 
@@ -309,10 +280,6 @@ class Solver
         for (let iter = 0; iter < iterations; ++iter)
         {
             let currentAlpha: number = this.alpha;
-            if (this.postStabilization) 
-            {
-                currentAlpha = iter < this.iterations ? 1 : 0;
-            }
 
             // PRIMAL FIRST
             for (const body of this.bodies)
@@ -374,10 +341,26 @@ class Solver
                             this.gameManager.logWarn("NaN detected in energy gradient, stopping simulation to prevent instability.");
                             return;
                         }
+
+                        const stiffnessRatio = energy.effectiveStiffness[j] / energy.targetStiffness[j];
+                        const scaledGrad = glm.vec3.scale(glm.vec3.create(), energy.grad_E[j], stiffnessRatio);
+                        const scaledHess = glm.mat3.multiplyScalar(glm.mat3.create(), energy.hess_E[j], stiffnessRatio);
+
+                        const diagReg = mag * stiffnessRatio * 0.01;
+                        scaledHess[0] += diagReg;
+                        scaledHess[4] += diagReg; // Diagonal terms only. (8 is 0 anyzays in 2D)
                         
                         // Accumulate forces (equation 13) and hessian (equation 17)
-                        glm.vec3.add(rhs, rhs, energy.grad_E[j]);
-                        glm.mat3.add(lhs, lhs, energy.hess_E[j]);
+                        if (this.useEnergyRamp)
+                        {
+                            glm.vec3.add(rhs, rhs, scaledGrad);
+                            glm.mat3.add(lhs, lhs, scaledHess); // We keep it SPD friendly
+                        }
+                        else
+                        {
+                            glm.vec3.add(rhs, rhs, energy.grad_E[j]);
+                            glm.mat3.add(lhs, lhs, energy.hess_E[j]);
+                        }
                     }
                 }
 
@@ -388,6 +371,7 @@ class Solver
             // DUAL UPDATE, except for last iteration if post-stabilization
             if (iter < this.iterations)
             {
+                // Dual update for forces
                 for (const force of this.forces)
                 {
                     force.computeConstraints(currentAlpha);
@@ -409,6 +393,20 @@ class Solver
                         {
                             force.penalty[j] = Math.min(force.penalty[j] + this.beta * Math.abs(force.C[j]), Math.min(force.stiffness[j], PENALTY_MAX));
                         }
+                    }
+                }
+
+                // Stiffness update for energies
+                for (const energy of this.energies)
+                {
+                    energy.updateStrainMeasures();
+                    for (let j = 0; j < energy.getRows(); ++j)
+                    {
+                        // Ramp up effective stiffness based on strain measure
+                        // Equation 16 from VBD paper: k^{n+1} = min(k*, k^n + β|C|)
+                        const strainMag = energy.strainMeasure[j];
+                        const newStiffness = energy.effectiveStiffness[j] + this.betaEnergy * strainMag;
+                        energy.effectiveStiffness[j] = Math.min(newStiffness, energy.targetStiffness[j]); // NEVER go beyond target stiffness
                     }
                 }
             }

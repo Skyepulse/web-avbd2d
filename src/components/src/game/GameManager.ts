@@ -1069,17 +1069,17 @@ class GameManager
         const mass = 1.0;
         const color = "#ffffff";
 
-        const addArea = (A: RigidBox, B: RigidBox, C: RigidBox, mu: number, lambda: number) => {
+        const addArea = (A: RigidBox, B: RigidBox, C: RigidBox, E: number, nu: number) => {
             this.solver.addEnergy(
                 new NeoHookianEnergy(
                     [A,B,C],
-                    mu,
-                    lambda
+                    E,
+                    nu
                 )
             );
         };
 
-        const createHexHookean = (cx: number, cy: number, mu: number, lambda: number) =>
+        const createHexHookean = (cx: number, cy: number, E: number, nu: number) =>
         {
             const R = 3.0;
             const C = this.makeParticle(cx, cy, mass, color); // center
@@ -1098,29 +1098,62 @@ class GameManager
 
             // Area constraints
             for (let i = 0; i < 6; i++)
-                addArea(C, ring[i], ring[(i+1)%6], mu, lambda); // center fan
+                addArea(C, ring[i], ring[(i+1)%6], E, nu); // center fan
 
             for (let i = 0; i < 6; i++)
-                addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6], mu, lambda); // outer triangles
+                addArea(ring[i], ring[(i+1)%6], ring[(i+2)%6], E, nu); // outer triangles
         };
         
-        createHexHookean(-20, 5, 20, 30);
-        createHexHookean(-10, 5, 100, 150);
-        createHexHookean(0 , 5, 300, 350);
-        createHexHookean(10 , 5, 2000, 2500);
-        createHexHookean(20 , 5, 3000, 3500);
-
-        // Static floor
-        const floor = new RigidBox(
+        // Ramp 1: E
+        createHexHookean(-20, 30,    50, 0.30);
+        createHexHookean(-10, 30,   800, 0.30);
+        createHexHookean(  0, 30,   3000, 0.30);
+        createHexHookean( 10, 30,  8000, 0.30);
+        createHexHookean( 20, 30,  20000, 0.30); 
+        const floor1 = new RigidBox(
             glm.vec2.fromValues(50, 2),
             new Uint8Array([200,200,200,255]),
             0.0,              // density = 0 => static
             1.0,
-            glm.vec3.fromValues(0, -5, 0),
+            glm.vec3.fromValues(0, 20, 0),
             glm.vec3.fromValues(0, 0, 0)
         );
-        floor.id = this.gameRenderer.addInstanceBox(floor);
-        this.solver.addRigidBox(floor);
+        floor1.id = this.gameRenderer.addInstanceBox(floor1);
+        this.solver.addRigidBox(floor1);
+
+        // Ramp 2: nu
+        createHexHookean(-20, 10, 500, 0.10);
+        createHexHookean(-10, 10, 500, 0.25);
+        createHexHookean(  0, 10, 500, 0.35);
+        createHexHookean( 10, 10, 500, 0.42);
+        createHexHookean( 20, 10, 500, 0.45);
+        const floor2 = new RigidBox(
+            glm.vec2.fromValues(50, 2),
+            new Uint8Array([200,200,200,255]),
+            0.0,
+            1.0,
+            glm.vec3.fromValues(0, 0, 0),
+            glm.vec3.fromValues(0, 0, 0)
+        );
+        floor2.id = this.gameRenderer.addInstanceBox(floor2);
+        this.solver.addRigidBox(floor2);
+
+        // Ramp 3: combined E and nu
+        createHexHookean(-20, -10,    50, 0.20);
+        createHexHookean(-10, -10,   200, 0.30);
+        createHexHookean(  0, -10,   600, 0.33);
+        createHexHookean( 10, -10,  4000, 0.39);
+        createHexHookean( 20, -10,  9000, 0.41);
+        const floor3 = new RigidBox(
+            glm.vec2.fromValues(50, 2),
+            new Uint8Array([200,200,200,255]),
+            0.0,
+            1.0,
+            glm.vec3.fromValues(0, -20, 0),
+            glm.vec3.fromValues(0, 0, 0)
+        );
+        floor3.id = this.gameRenderer.addInstanceBox(floor3);
+        this.solver.addRigidBox(floor3);
     }
 
     //================================//
@@ -1277,10 +1310,7 @@ class GameManager
             }
         }
 
-        makeBeam(20, 5, 1500.0, 2000.0, glm.vec2.fromValues(30, 10), 1.0);
-        //makeBeam(20, 5, 500.0, 800.0, glm.vec2.fromValues(0, 0), 1.0);
-        //makeBeam(20, 5, 100.0, 150.0, glm.vec2.fromValues(-30, -10), 1.0);
-
+        makeBeam(20, 5, 50000, 0.30, glm.vec2.fromValues(0, 0), 1.0);
     }
 }
 

@@ -187,6 +187,54 @@
   }
 
   //================================//
+  export function SVD2x2(F: glm.mat2): { U: glm.mat2, S: glm.vec2, V: glm.mat2 }
+  {
+      // For 2x2, we can use closed-form SVD
+      // F = [a b; c d]
+      const a = F[0], b = F[2];
+      const c = F[1], d = F[3];
+
+      const E = (a + d) * 0.5;
+      const F_val = (a - d) * 0.5;
+      const G = (c + b) * 0.5;
+      const H = (c - b) * 0.5;
+
+      const Q = Math.sqrt(E * E + H * H);
+      const R = Math.sqrt(F_val * F_val + G * G);
+
+      const sv1 = Q + R;
+      const sv2 = Math.abs(Q - R);
+
+      const sigma1 = Math.max(sv1, sv2);
+      const sigma2 = Math.min(sv1, sv2);
+
+      const angle1 = Math.atan2(G, F_val);
+      const angle2 = Math.atan2(H, E);
+
+      const theta = 0.5 * (angle2 - angle1);
+      const phi = 0.5 * (angle2 + angle1);
+
+      const cosTheta = Math.cos(theta), sinTheta = Math.sin(theta);
+      const cosPhi = Math.cos(phi), sinPhi = Math.sin(phi);
+
+      let U: glm.mat2 = glm.mat2.fromValues(cosPhi, sinPhi, -sinPhi, cosPhi);
+      let V: glm.mat2 = glm.mat2.fromValues(cosTheta, sinTheta, -sinTheta, cosTheta);
+
+      const detF = glm.mat2.determinant(F);
+      if (detF < 0) // Needs a flip here
+      {
+        U[2] = -U[2]; 
+        U[3] = -U[3];
+      }
+
+      return{
+        U: U,
+        S: glm.vec2.fromValues(sigma1, sigma2),
+        V: V
+      }
+  }
+
+  //================================//
   export function TESTS(): void
   {
       // Validating glm.mat2 column-major order

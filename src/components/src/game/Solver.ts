@@ -31,7 +31,7 @@ class Solver
     public beta: number = 100000;
     public gamma: number = 0.99;
     public betaEnergy: number = 10; // For energy based stabilization
-    public useEnergyRamp: boolean = true;
+    public useEnergyRamp: boolean = false;
 
     public postStabilization: boolean = false;
 

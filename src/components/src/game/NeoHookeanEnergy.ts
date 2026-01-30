@@ -50,7 +50,7 @@
         public projectionMode: EigenProjectionMode = EigenProjectionMode.ABSOLUTE;
 
         // private prevEnergy: number = 0;
-        private trustRegionRho: number = 1.0;
+        private trustRegionRho: number = 0.0; // Make sure we start first iteration with clamping
         private readonly trustRegionThreshold: number = 0.01;
 
         //================================//
@@ -258,7 +258,15 @@
                     useAbsolute = true;
                     break;
                 case EigenProjectionMode.ADAPTIVE:
-                    useAbsolute = Math.abs(this.trustRegionRho - 1.0) > this.trustRegionThreshold;
+                    useAbsolute = Math.abs(this.trustRegionRho - 1.0) > this.trustRegionThreshold; // w = 1.0
+                    if (!useAbsolute)
+                    {
+                        // Clamp in this case, w = 0.5
+                        for (let i = 0; i < projected.length; ++i)
+                        {
+                            projected[i] = Math.max(1e-6, projected[i]);
+                        }
+                    }
                     break;
             }
 

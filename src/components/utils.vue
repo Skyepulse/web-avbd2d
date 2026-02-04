@@ -172,6 +172,19 @@
             />
             <label id="gammaValue" ref="gammaLabel">0.99</label>
         </div>
+        <div id="projection-mode-picker" class="flex flex-row space-x-1">
+            <label for="projection-mode">Projection Mode:</label>
+            <select
+            ref="projectionModeSelect"
+            id="projection-mode"
+            class=" text-black bg-amber-50"
+            @change="(event) => { if (gameManager) { gameManager.modifyProjectionMode(Number((event.target as HTMLSelectElement).value)); } }"
+            >
+                <option value="0" :selected="gameManager && gameManager.getProjectionMode() === 0">CLAMP</option>
+                <option value="1" :selected="gameManager && gameManager.getProjectionMode() === 1">ABSOLUTE</option>
+                <option value="2" :selected="gameManager && gameManager.getProjectionMode() === 2">ADAPTATIVE</option>
+            </select>
+        </div>
     </div>
 </template>
 
@@ -212,6 +225,8 @@
     const iterationsInput = ref<HTMLInputElement | null>(null);
 
     const render = ref<boolean>(true);
+
+    const projectionModeSelect = ref<HTMLSelectElement | null>(null);
 
     // ================================== //
     onMounted(() => {
@@ -260,6 +275,12 @@
         { 
             alphaLabel.value.textContent = "0.99";
             alphaInput.value.value = "0.99";
+        }
+
+        if(projectionModeSelect.value && gameManager.value)
+        {
+            projectionModeSelect.value.value = gameManager.value.getProjectionMode().toString();
+            console.log("Projection mode select value set to: " + projectionModeSelect.value.value);
         }
     }
 

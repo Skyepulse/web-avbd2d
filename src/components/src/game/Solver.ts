@@ -13,6 +13,7 @@ import Manifold, { type ContactRender, type LineRender } from './Manifold';
 import { outerMat3D, solveLDLT } from '@src/helpers/MathUtils';
 import type GameManager from './GameManager';
 import type EnergyFEM from './EnergyFEM';
+import { EigenProjectionMode } from './EnergyFEM';
 
 const PENALTY_MIN = 1;
 const PENALTY_MAX = 1000000000;
@@ -56,6 +57,10 @@ class Solver
 
     public paused: boolean = false;
 
+    public projectionMode: EigenProjectionMode = EigenProjectionMode.ABSOLUTE;
+    private prevTotalElasticEnergy: number = 0;
+    private trustRegionRho: number = 0.0;
+
     // ================================== //
     constructor(gameManager: GameManager)
     {
@@ -93,6 +98,9 @@ class Solver
         this.perfStepAcc = 0;
         this.perfIntervalStart = performance.now();
 
+        this.prevTotalElasticEnergy = 0;
+        this.trustRegionRho = 0.0;
+
         this.urgentStop = false;
     }
 
@@ -113,6 +121,8 @@ class Solver
     public getUseEnergyRamp(): boolean { return this.useEnergyRamp; }
     public getIsPostStabilization(): boolean { return this.postStabilization; }
     public setIsPostStabilization(isPostStabilization: boolean): void { this.postStabilization = isPostStabilization; }
+    public setProjectionMode(mode: EigenProjectionMode): void { this.projectionMode = mode; }
+    public getProjectionMode(): EigenProjectionMode { return this.projectionMode; }
 
     //================================//
     public setDefaults(): void
@@ -125,6 +135,7 @@ class Solver
         this.betaEnergy = 10;
         this.alpha = 0.99;
         this.gamma = 0.99;
+        this.projectionMode = EigenProjectionMode.ABSOLUTE;
 
         // Post stabilization applies an extra iteration to fix positional error.
         // Is used instead of Alpha.
@@ -280,6 +291,7 @@ class Solver
         for (let iter = 0; iter < iterations; ++iter)
         {
             let currentAlpha: number = this.alpha;
+            let predictedDecrease = 0;
 
             // PRIMAL FIRST
             for (const body of this.bodies)
@@ -328,7 +340,7 @@ class Solver
 
                 for (const energy of body.energies)
                 {
-                    energy.computeEnergyTerms(body);
+                    energy.computeEnergyTerms(body , this.projectionMode, this.trustRegionRho);
 
                     const rows = energy.getRows();
                     for (let j = 0; j < rows; ++j)
@@ -366,6 +378,36 @@ class Solver
 
                 const dx: glm.vec3 = solveLDLT(lhs, rhs);
                 body.setPosition(glm.vec3.sub(glm.vec3.create(), body.getPosition(), dx));
+
+                for (const energy of body.energies) {
+                    for (let j = 0; j < energy.getRows(); ++j) {
+                        predictedDecrease += 0.5 * glm.vec3.dot(dx, energy.grad_E[j]);
+                    }
+                }          
+            }
+
+            // Update of the trust-region ratio for ADAPTIVE projection
+            if (this.projectionMode === EigenProjectionMode.ADAPTIVE) 
+            {
+
+                // Sum cached energies (computed for free during computeEnergyTerms)
+                let currentTotalEnergy = 0;
+                for (const energy of this.energies) 
+                {
+                    currentTotalEnergy += energy.getCachedEnergy();
+                }
+                
+                // Compute trust-region ratio (Chen et al. 2024, Eq. 21)
+                const actualDecrease = this.prevTotalElasticEnergy - currentTotalEnergy;
+                if (Math.abs(predictedDecrease) > 1e-10) 
+                {
+                    this.trustRegionRho = actualDecrease / predictedDecrease;
+                } else 
+                {
+                    this.trustRegionRho = 1.0; // Default to clamping if no predicted change
+                }
+                
+                this.prevTotalElasticEnergy = currentTotalEnergy;
             }
 
             // DUAL UPDATE, except for last iteration if post-stabilization

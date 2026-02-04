@@ -344,6 +344,18 @@ class GameManager
         };
     }
 
+    //================================//
+    public modifyProjectionMode(mode: number): void
+    {
+        this.solver.setProjectionMode(mode);
+    }
+
+    //================================//
+    public getProjectionMode(): number
+    {
+        return this.solver.getProjectionMode() as number;
+    }
+
     // ================================== //
     public async LoadLevel(levelID: number): Promise<void>
     {
@@ -1164,8 +1176,8 @@ class GameManager
         const spacing = 2.0;
         const mass = 0.1;
 
-        const mu = 300.0;
-        const lambda = 258.0;
+        const nu = 0.35;
+        const E = 20000.0;
 
         const cloth: RigidBox[][] = [];
 
@@ -1194,26 +1206,19 @@ class GameManager
 
                 // Triangle 1: A–B–D
                 this.solver.addEnergy(
-                    new StVKEnergy([A, B, D], mu, lambda)
+                    new StVKEnergy([A, B, D], E, nu)
                 );
 
                 // Triangle 2: A–D–C
                 this.solver.addEnergy(
-                    new StVKEnergy([A, D, C], mu, lambda)
+                    new StVKEnergy([A, D, C], E, nu)
                 );
             }
         }
 
         // We pin the corners
-        const pinA = glm.vec2.fromValues(
-            -(W - 1) * spacing * 0.5,
-            H * spacing + 8.0
-        );
-
-        const pinB = glm.vec2.fromValues(
-            (W - 1) * spacing * 0.5,
-            H * spacing + 8.0
-        );
+        const pinA = glm.vec2.clone(cloth[0][0].getPosition());
+        const pinB = glm.vec2.clone(cloth[0][W - 1].getPosition());
 
         const stiff = glm.vec3.fromValues(Infinity, Infinity, 0.0);
 

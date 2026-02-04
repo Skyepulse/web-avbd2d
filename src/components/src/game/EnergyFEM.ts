@@ -7,6 +7,14 @@ import * as glm from 'gl-matrix';
 import type RigidBox from './RigidBox';
 import type { ContactRender, LineRender } from './Manifold';
 
+//================================//
+export enum EigenProjectionMode {
+    CLAMP = 0,      //  max(λ, 0)
+    ABSOLUTE = 1,   //  |λ|
+    ADAPTIVE = 2    // Trust-region based switching, with rho
+};
+
+//================================//
 class EnergyFEM
 {
     public bodies: RigidBox[] = [];
@@ -22,6 +30,8 @@ class EnergyFEM
 
     public fmin: number[] = [];
     public fmax: number[] = [];
+
+    public cachedEnergy: number = 0;
 
     // =============== PUBLIC =================== //
     constructor(bodiesArray: (RigidBox | null)[])
@@ -78,9 +88,15 @@ class EnergyFEM
     // - grad_E[j]: the energy gradient (force)
     // - hess_E[j]: the energy Hessian
     // - strainMeasure[j]: a scalar measure of deformation (for stiffness ramping)
-    public computeEnergyTerms(_body: RigidBox): void
+    public computeEnergyTerms(_body: RigidBox, _eigenProjectionMode: EigenProjectionMode, _trustRegionRho: number): void
     {
         console.warn("This method should not be called directly.");
+    }
+
+    //================================//
+    public getCachedEnergy(): number
+    {
+        return this.cachedEnergy;
     }
 
     //================================//

@@ -1,5 +1,5 @@
     import { outerMat2D, scaleMat2D, SVD2x2 } from "@src/helpers/MathUtils";
-    import EnergyFEM from "./EnergyFEM";
+    import EnergyFEM, { EigenProjectionMode } from "./EnergyFEM";
     import type RigidBox from "./RigidBox";
     import * as glm from "gl-matrix";
     import type { ContactRender, LineRender } from "./Manifold";
@@ -14,13 +14,6 @@
     // 3000   → stiff               0.45 → rubber
     // 8000   → very stiff          0.48 → nearly incompressible
     // 20000   → nearly rigid       0.495 → highly incompressible
-    
-    //================================//
-    export enum EigenProjectionMode {
-        CLAMP = 0,      //  max(λ, 0)
-        ABSOLUTE = 1,   //  |λ|
-        ADAPTIVE = 2    // Trust-region based switching, with rho
-    };
 
     //================================//
     class NeoHookeanEnergy extends EnergyFEM
@@ -47,10 +40,6 @@
         private gradN1: glm.vec2 = glm.vec2.create();
         private gradN2: glm.vec2 = glm.vec2.create();
 
-        public projectionMode: EigenProjectionMode = EigenProjectionMode.ABSOLUTE;
-
-        // private prevEnergy: number = 0;
-        private trustRegionRho: number = 0.0; // Make sure we start first iteration with clamping
         private readonly trustRegionThreshold: number = 0.01;
 
         //================================//
@@ -239,13 +228,13 @@
         }
 
         //================================//
-        private project(eigenvalues: number[]): number[]
+        private project(eigenvalues: number[], projectionMode: EigenProjectionMode, trustRegionRho: number): number[]
         {
             const projected = [...eigenvalues];
 
             let useAbsolute = false;
 
-            switch (this.projectionMode)
+            switch (projectionMode)
             {
                 case EigenProjectionMode.CLAMP:
 
@@ -258,7 +247,7 @@
                     useAbsolute = true;
                     break;
                 case EigenProjectionMode.ADAPTIVE:
-                    useAbsolute = Math.abs(this.trustRegionRho - 1.0) > this.trustRegionThreshold; // w = 1.0
+                    useAbsolute = Math.abs(trustRegionRho - 1.0) > this.trustRegionThreshold; // w = 1.0
                     if (!useAbsolute)
                     {
                         // Clamp in this case, w = 0.5
@@ -310,9 +299,12 @@
         }
 
         // ================================== //
-        public computeEnergyTerms(body: RigidBox): void
+        public computeEnergyTerms(body: RigidBox, projectionMode: EigenProjectionMode, trustRegionRho: number): void
         {
             const { F, J } = this.computeDeformationGradient();
+
+            const I1 = F[0]*F[0] + F[1]*F[1] + F[2]*F[2] + F[3]*F[3];
+            this.cachedEnergy = this.restArea * ((this.lameMu / 2) * (I1 - 2) + (this.lameLambda / 2) * Math.pow(J - this.a, 2));
 
             // ALSO update strain measure here so it's always current
             const FminusI = glm.mat2.fromValues(
@@ -376,7 +368,7 @@
             // NOW compute the hessian
             const { U, S, V } = SVD2x2(F);
             const eigenvalues = this.computeHessianEigenvalues(S, J);
-            const projectedEigenvalues = this.project(eigenvalues);
+            const projectedEigenvalues = this.project(eigenvalues, projectionMode, trustRegionRho);
 
             // Projected Hessian computation
             // The F-space Hessian eigenvectors are formed from:
@@ -399,16 +391,20 @@
             twist = scaleMat2D(twist, 1 / Math.sqrt(2));
             flip = scaleMat2D(flip, 1 / Math.sqrt(2));
 
+            const vecF = (M: glm.mat2): number[] => [
+                M[0], // F00
+                M[1], // F10
+                M[2], // F01
+                M[3], // F11
+            ];
+
             const H_F: glm.mat4 = glm.mat4.create();
             const addOuterProduct = (H: glm.mat4, D: glm.mat2, scale: number) =>
             {
-                for (let i = 0; i < 4; ++i)
-                {
-                    for (let j = 0; j < 4; ++j)
-                    {
-                        H[i * 4 + j] += scale * D[i] * D[j];
-                    }
-                }
+                const d = vecF(D);
+                    for (let i = 0; i < 4; ++i)
+                        for (let j = 0; j < 4; ++j)
+                            H[i * 4 + j] += scale * d[i] * d[j];
             };
             addOuterProduct(H_F, D11, projectedEigenvalues[0]);
             addOuterProduct(H_F, D22, projectedEigenvalues[1]);

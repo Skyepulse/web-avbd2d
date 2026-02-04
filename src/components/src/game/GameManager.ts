@@ -1177,7 +1177,7 @@ class GameManager
         const mass = 0.1;
 
         const nu = 0.35;
-        const E = 20000.0;
+        const E = 1000.0;
 
         const cloth: RigidBox[][] = [];
 

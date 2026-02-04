@@ -1,5 +1,19 @@
 <template>
-    <div id="vertical-flex-box" class="flex flex-col space-y-2 w-[300px] h-[400px] overflow-auto">
+    <div id="expand-toggle" class="flex flex-row justify-between ">
+        <label for="expand-checkbox">Show Utils Panel:</label>
+        <button
+            id="expand-checkbox"
+            class="ml-2 mb-2 focus:outline-none"
+            @click="render = !render"
+        >
+            <!-- Rotate image 90 if render is true else -90 -->
+            <img src="@src/assets/expand.png"
+            class="w-6 h-6 bg-none"
+            :class="render ? 'transform rotate-90' : 'transform -rotate-90'"
+            alt="Expand/Collapse" />
+        </button>
+    </div>
+    <div id="vertical-flex-box" class="flex flex-col space-y-2 w-[300px] h-[400px] overflow-auto" v-if="render">
         <button
             id="restart-button"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
@@ -196,6 +210,8 @@
     const gammaInput = ref<HTMLInputElement | null>(null);
 
     const iterationsInput = ref<HTMLInputElement | null>(null);
+
+    const render = ref<boolean>(true);
 
     // ================================== //
     onMounted(() => {
